@@ -27,6 +27,7 @@ interface Profile {
     followersCount?: number
     followingCount?: number
     vinyls?: Vinyl[]
+    giftedVinyls?: Vinyl[]
     [key: string]: any
 }
 
@@ -37,9 +38,16 @@ function ProfileContent() {
     const [profile, setProfile] = useState<Profile | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
+    const [currentUser, setCurrentUser] = useState<any>(null)
 
     const [searchQuery, setSearchQuery] = useState("")
     const [groupByArtist, setGroupByArtist] = useState(false)
+    const [activeTab, setActiveTab] = useState<"collection" | "gifted_to" | "gifted_by">("collection")
+
+    useEffect(() => {
+        const user = JSON.parse(localStorage.getItem("user") || "{}")
+        setCurrentUser(user)
+    }, [])
 
     const fetchProfile = async () => {
         if (!username) return
@@ -74,6 +82,7 @@ function ProfileContent() {
             const profileData: Profile = {
                 ...data.user,
                 vinyls: data.vinyls,
+                giftedVinyls: data.giftedVinyls,
                 stats: data.stats,
                 is_following: isFollowing,
                 followersCount,
@@ -115,14 +124,28 @@ function ProfileContent() {
         )
     }
 
-    const filteredVinyls = profile.vinyls?.filter((vinyl: any) => {
+    const isOwner = currentUser?.id === profile.id
+
+    const getDisplayedVinyls = () => {
+        if (activeTab === "gifted_to") {
+            return profile.vinyls?.filter((v: any) => v.gifted_by_user_id) || []
+        }
+        if (activeTab === "gifted_by") {
+            return profile.giftedVinyls || []
+        }
+        return profile.vinyls || []
+    }
+
+    const displayedVinyls = getDisplayedVinyls()
+
+    const filteredVinyls = displayedVinyls.filter((vinyl: any) => {
         const query = searchQuery.toLowerCase()
         return (
             vinyl.title.toLowerCase().includes(query) ||
             (vinyl.artist && vinyl.artist.toLowerCase().includes(query)) ||
             (vinyl.genre && vinyl.genre.toLowerCase().includes(query))
         )
-    }) || []
+    })
 
     const vinylsByArtist = filteredVinyls.reduce((acc: any, vinyl: any) => {
         const artist = vinyl.artist ? vinyl.artist.replace(/\s*\([^)]*\)/g, "") : "Inconnu"
@@ -131,13 +154,13 @@ function ProfileContent() {
         return acc
     }, {})
 
-    const isPrivate = profile.is_private && !profile.is_following
+    const isPrivate = profile.is_private && !profile.is_following && !isOwner
 
     return (
         <div className="max-w-4xl mx-auto">
             <button
                 onClick={() => router.back()}
-                className="flex items-center gap-2 text-text-secondary hover:text-white mb-4 transition-colors"
+                className="flex items-center gap-2 text-black hover:text-text-secondary hover:cursor-pointer mb-4 transition-colors"
             >
                 <ArrowLeft className="w-5 h-5" />
                 <span>Retour</span>
@@ -194,7 +217,26 @@ function ProfileContent() {
             ) : (
                 <div>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                        <h2 className="text-2xl font-bold text-primary">Collection</h2>
+                        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
+                            <button
+                                onClick={() => setActiveTab("collection")}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "collection" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-white"}`}
+                            >
+                                Collection
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("gifted_to")}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_to" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-white"}`}
+                            >
+                                Reçus 🎁
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("gifted_by")}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_by" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-white"}`}
+                            >
+                                Offerts 💝
+                            </button>
+                        </div>
 
                         <div className="flex flex-col sm:flex-row gap-4">
                             <input
@@ -229,6 +271,9 @@ function ProfileContent() {
                                                 vinyl={vinyl}
                                                 onUpdate={fetchProfile}
                                                 variant="dark"
+                                                readOnly={!isOwner || activeTab === "gifted_by"}
+                                                currentUserId={currentUser?.id}
+                                                currentUsername={currentUser?.username}
                                             />
                                         ))}
                                     </div>
@@ -243,6 +288,9 @@ function ProfileContent() {
                                     vinyl={vinyl}
                                     onUpdate={fetchProfile}
                                     variant="dark"
+                                    readOnly={!isOwner || activeTab === "gifted_by"}
+                                    currentUserId={currentUser?.id}
+                                    currentUsername={currentUser?.username}
                                 />
                             ))}
                         </div>

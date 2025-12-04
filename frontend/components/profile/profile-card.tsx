@@ -126,7 +126,7 @@ export function ProfileCard({ profile, isOwnProfile = false, onUpdate }: Profile
                 {isOwnProfile && !editing && (
                   <button
                     onClick={() => setEditing(true)}
-                    className="bg-secondary/10 hover:bg-secondary/20 text-primary border border-primary/20 px-4 py-2 rounded-lg font-medium transition text-sm"
+                    className="bg-secondary/10 hover:bg-secondary/20 text-white border border-primary/20 px-4 py-2 rounded-lg font-medium transition text-sm"
                   >
                     Modifier
                   </button>
@@ -173,10 +173,10 @@ export function ProfileCard({ profile, isOwnProfile = false, onUpdate }: Profile
 
             {/* Edit Form */}
             {isOwnProfile && editing && (
-              <div className="space-y-4 bg-background/50 p-4 rounded-lg border border-border mt-2">
+              <div className="space-y-4 bg-background/70 p-4 rounded-lg border border-border mt-2">
                 <div className="grid gap-4">
                   <div>
-                    <label className="block text-xs text-text-secondary mb-1">Nom d'utilisateur</label>
+                    <label className="block text-xs text-black mb-1">Nom d'utilisateur</label>
                     <input
                       type="text"
                       name="username"
@@ -186,7 +186,7 @@ export function ProfileCard({ profile, isOwnProfile = false, onUpdate }: Profile
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-text-secondary mb-1">Bio</label>
+                    <label className="block text-xs text-black mb-1">Bio</label>
                     <textarea
                       name="bio"
                       value={formData.bio}
@@ -195,7 +195,7 @@ export function ProfileCard({ profile, isOwnProfile = false, onUpdate }: Profile
                       className="w-full bg-black border border-border rounded px-3 py-2 text-sm focus:border-primary outline-none resize-none"
                     />
                   </div>
-                  <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+                  <label className="flex items-center gap-2 text-sm text-black cursor-pointer">
                     <input
                       type="checkbox"
                       name="isPublic"

@@ -34,12 +34,37 @@ router.get("/:username", async (req: AuthRequest, res: Response) => {
       updatedAt: new Date(dbUser.updatedAt),
     };
 
-    // Récupère les vinyles de l'utilisateur
+    // Récupère les vinyles de l'utilisateur (Collection & Reçus & Partagés avec lui)
     const vinylsResult = await query(
-      "SELECT * FROM vinyls WHERE user_id = $1 ORDER BY date_added DESC",
+      `SELECT v.*, 
+              u_gift.username as gifted_by_username, 
+              u_share.username as shared_with_username,
+              u_owner.username as owner_username
+       FROM vinyls v
+       JOIN users u_owner ON v.user_id = u_owner.id
+       LEFT JOIN users u_gift ON v.gifted_by_user_id = u_gift.id
+       LEFT JOIN users u_share ON v.shared_with_user_id = u_share.id
+       WHERE v.user_id = $1 OR v.shared_with_user_id = $1
+       ORDER BY v.date_added DESC`,
       [user.id]
     );
     const vinyls = vinylsResult.rows;
+
+    // Récupère les vinyles offerts PAR l'utilisateur (Offerts)
+    const giftedVinylsResult = await query(
+      `SELECT v.*, 
+              u_owner.username as gifted_to_username,
+              u_share.username as shared_with_username,
+              u_gift.username as gifted_by_username
+       FROM vinyls v
+       JOIN users u_owner ON v.user_id = u_owner.id
+       LEFT JOIN users u_share ON v.shared_with_user_id = u_share.id
+       JOIN users u_gift ON v.gifted_by_user_id = u_gift.id
+       WHERE v.gifted_by_user_id = $1
+       ORDER BY v.date_added DESC`,
+      [user.id]
+    );
+    const giftedVinyls = giftedVinylsResult.rows;
 
     // Statistiques
     const statsResult = await query(
@@ -49,7 +74,7 @@ router.get("/:username", async (req: AuthRequest, res: Response) => {
     );
     const stats = statsResult.rows[0];
 
-    return res.json({ user, vinyls, stats });
+    return res.json({ user, vinyls, giftedVinyls, stats });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erreur lors de la récupération du profil" });

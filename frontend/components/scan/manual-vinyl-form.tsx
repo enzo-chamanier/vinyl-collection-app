@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { api } from "@/lib/api"
 import { VinylColorPicker, type VinylColorData, getVinylBackground } from "../vinyl/vinyl-color-picker"
 import { AlertCircle } from "lucide-react"
@@ -18,12 +18,30 @@ export function ManualVinylForm({ onSubmit, loading = false }: ManualVinylFormPr
     genre: "",
     releaseYear: new Date().getFullYear(),
     vinylColor: null as VinylColorData | VinylColorData[] | null,
-    discCount: 1
+    discCount: 1,
+    giftedByUserId: "",
+    sharedWithUserId: ""
   })
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState("")
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showColorPicker, setShowColorPicker] = useState(false)
+  const [friends, setFriends] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchFriends = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem("user") || "{}")
+        if (user.id) {
+          const res = await api.get(`/followers/following/${user.id}`)
+          setFriends(res)
+        }
+      } catch (e) {
+        console.error("Error fetching friends", e)
+      }
+    }
+    fetchFriends()
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -162,11 +180,10 @@ export function ManualVinylForm({ onSubmit, loading = false }: ManualVinylFormPr
                     }}
                   >
                     <div className="w-1.5 h-1.5 rounded-full bg-black/20" />
-                    {discCount > 1 && (
-                      <span className="absolute -bottom-1 -right-1 bg-black text-[6px] text-white px-1 rounded-full border border-white/20">
-                        {discCount}
-                      </span>
-                    )}
+                    {/* Number indicator for multi-disc */}
+                    <span className="absolute -bottom-1 -right-1 bg-black text-[6px] text-white px-1 rounded-full border border-white/20">
+                      {discCount}
+                    </span>
                   </div>
 
                   {result.coverImage ? (
@@ -207,7 +224,7 @@ export function ManualVinylForm({ onSubmit, loading = false }: ManualVinylFormPr
               className="w-full aspect-square rounded-lg border border-border flex items-center justify-center transition hover:border-primary relative overflow-hidden"
               style={{
                 background: previewColor
-                  ? getVinylBackground(previewColor.type, previewColor.primary, previewColor.secondary)
+                  ? getVinylBackground(previewColor.type, previewColor.primary, previewColor.secondary, previewColor.splatterSize, previewColor.tertiary, previewColor.quaternary)
                   : "#1a1a1a"
               }}
             >
@@ -216,11 +233,10 @@ export function ManualVinylForm({ onSubmit, loading = false }: ManualVinylFormPr
                   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-black rounded-full border-2 border-white/10 flex items-center justify-center">
                     <div className="w-2 h-2 bg-white/20 rounded-full" />
                   </div>
-                  {formData.discCount > 1 && (
-                    <span className="absolute bottom-1 right-1 bg-black text-[8px] text-white px-1.5 py-0.5 rounded-full border border-white/20">
-                      {formData.discCount}x
-                    </span>
-                  )}
+                  {/* Number indicator for multi-disc */}
+                  <span className="absolute bottom-1 right-1 bg-black text-[8px] text-white px-1.5 py-0.5 rounded-full border border-white/20">
+                    {formData.discCount}x
+                  </span>
                 </div>
               ) : (
                 <div className="flex flex-col items-center text-text-secondary">
@@ -261,6 +277,7 @@ export function ManualVinylForm({ onSubmit, loading = false }: ManualVinylFormPr
             <option value="Electronic">Électronique</option>
             <option value="Classical">Classique</option>
             <option value="Soul">Soul</option>
+            <option value="Alternatif">Alternatif</option>
             <option value="Other">Autre</option>
           </select>
 
@@ -287,6 +304,32 @@ export function ManualVinylForm({ onSubmit, loading = false }: ManualVinylFormPr
           </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-3">
+          <select
+            name="giftedByUserId"
+            value={formData.giftedByUserId}
+            onChange={handleChange}
+            className="w-full text-text-secondary bg-black border-border rounded h-10 px-3 text-sm"
+          >
+            <option value="">🎁 Offert par...</option>
+            {friends.map(friend => (
+              <option key={friend.id} value={friend.id}>{friend.username}</option>
+            ))}
+          </select>
+
+          <select
+            name="sharedWithUserId"
+            value={formData.sharedWithUserId}
+            onChange={handleChange}
+            className="w-full text-text-secondary bg-black border-border rounded h-10 px-3 text-sm"
+          >
+            <option value="">🤝 Commun avec...</option>
+            {friends.map(friend => (
+              <option key={friend.id} value={friend.id}>{friend.username}</option>
+            ))}
+          </select>
+        </div>
+
         <button
           onClick={handleDirectAdd}
           disabled={loading}
@@ -300,7 +343,17 @@ export function ManualVinylForm({ onSubmit, loading = false }: ManualVinylFormPr
         <VinylColorPicker
           initialColor={formData.vinylColor || undefined}
           discCount={Number(formData.discCount) || 1}
-          onSave={(color, newDiscCount) => setFormData(prev => ({ ...prev, vinylColor: color, discCount: newDiscCount }))}
+          initialGiftedBy={formData.giftedByUserId}
+          initialSharedWith={formData.sharedWithUserId}
+          onSave={(color, newDiscCount, giftedBy, sharedWith) => {
+            setFormData(prev => ({
+              ...prev,
+              vinylColor: color,
+              discCount: newDiscCount,
+              giftedByUserId: giftedBy || prev.giftedByUserId,
+              sharedWithUserId: sharedWith || prev.sharedWithUserId
+            }))
+          }}
           onClose={() => setShowColorPicker(false)}
         />
       )}

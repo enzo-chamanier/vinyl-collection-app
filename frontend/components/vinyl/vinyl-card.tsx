@@ -4,7 +4,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { api } from "@/lib/api"
 import { VinylColorPicker, type VinylColorData, getVinylBackground } from "./vinyl-color-picker"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, CheckCircle } from "lucide-react"
 
 interface Vinyl {
   id: string
@@ -15,15 +15,38 @@ interface Vinyl {
   rating?: number
   vinyl_color?: string
   disc_count?: number
+  gifted_by_username?: string
+  shared_with_username?: string
+  gifted_by_user_id?: string
+  shared_with_user_id?: string
+  gifted_to_username?: string
+  owner_username?: string
+  user_id?: string
 }
 
 interface VinylCardProps {
   vinyl: Vinyl
   onUpdate: () => void
   variant?: "default" | "dark"
+  selectable?: boolean
+  selected?: boolean
+  onSelect?: () => void
+  readOnly?: boolean
+  currentUserId?: string
+  currentUsername?: string
 }
 
-export function VinylCard({ vinyl, onUpdate, variant = "default" }: VinylCardProps) {
+export function VinylCard({
+  vinyl,
+  onUpdate,
+  variant = "default",
+  selectable = false,
+  selected = false,
+  onSelect,
+  readOnly = false,
+  currentUserId,
+  currentUsername
+}: VinylCardProps) {
   const [showDelete, setShowDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showColorPicker, setShowColorPicker] = useState(false)
@@ -40,13 +63,15 @@ export function VinylCard({ vinyl, onUpdate, variant = "default" }: VinylCardPro
     }
   }
 
-  const handleColorSave = async (colorData: VinylColorData | VinylColorData[], newDiscCount: number) => {
+  const handleColorSave = async (colorData: VinylColorData | VinylColorData[], newDiscCount: number, giftedBy?: string, sharedWith?: string) => {
     try {
       await api.put(`/vinyls/${vinyl.id}`, {
         ...vinyl,
         coverImage: vinyl.cover_image,
         vinylColor: JSON.stringify(colorData),
-        discCount: newDiscCount
+        discCount: newDiscCount,
+        giftedByUserId: giftedBy,
+        sharedWithUserId: sharedWith
       })
       onUpdate()
     } catch (error) {
@@ -85,44 +110,61 @@ export function VinylCard({ vinyl, onUpdate, variant = "default" }: VinylCardPro
     <>
       <div className="group relative">
         <div className="relative aspect-square bg-surface rounded-lg overflow-hidden">
+          {selectable && (
+            <div
+              className={`absolute inset-0 z-30 flex items-center justify-center transition-colors ${selected ? "bg-primary/70" : "bg-black/10 hover:bg-black/70"}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                onSelect?.()
+              }}
+            >
+              {selected ? (
+                <CheckCircle className="text-white w-12 h-12 drop-shadow-lg" fill="black" />
+              ) : (
+                <div className="w-8 h-8 rounded-full border-2 border-black/50" />
+              )}
+            </div>
+          )}
+
           {/* Vinyl Color Icons - Stacked for multi-disc */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setShowColorPicker(true)
-            }}
-            className="absolute top-2 left-2 z-20 flex -space-x-2 transition-transform hover:scale-110"
-            title={isMissingColor ? "Définir les couleurs" : "Modifier les couleurs"}
-          >
-            {isMissingColor ? (
-              <div className="w-8 h-8 rounded-full bg-red-500 border-2 border-white/20 shadow-lg flex items-center justify-center">
-                <AlertCircle size={16} className="text-white" />
-              </div>
-            ) : (
-              Array.from({ length: Math.min(discCount, 3) }).map((_, i) => {
-                const color = displayColors[i]
-                return (
-                  <div
-                    key={i}
-                    className="w-8 h-8 rounded-full shadow-lg flex items-center justify-center relative"
-                    style={{
-                      background: color ? getVinylBackground(color.type, color.primary, color.secondary) : "#1a1a1a",
-                      border: "2px solid rgba(255,255,255,0.2)",
-                      zIndex: 30 - i
-                    }}
-                  >
-                    <div className="w-2 h-2 rounded-full bg-black/20" />
-                    {/* Number indicator for multi-disc */}
-                    {discCount > 1 && (
+          {!selectable && (
+            <button
+              onClick={(e) => {
+                if (readOnly) return
+                e.stopPropagation()
+                setShowColorPicker(true)
+              }}
+              className={`absolute top-2 left-2 z-20 flex -space-x-2 transition-transform ${readOnly ? '' : 'hover:scale-110 cursor-pointer'}`}
+              title={readOnly ? "Voir les couleurs" : (isMissingColor ? "Définir les couleurs" : "Modifier les couleurs")}
+            >
+              {isMissingColor ? (
+                <div className="w-8 h-8 rounded-full bg-red-500 border-2 border-white/20 shadow-lg flex items-center justify-center">
+                  <AlertCircle size={16} className="text-white" />
+                </div>
+              ) : (
+                Array.from({ length: Math.min(discCount, 3) }).map((_, i) => {
+                  const color = displayColors[i]
+                  return (
+                    <div
+                      key={i}
+                      className="w-8 h-8 rounded-full shadow-lg flex items-center justify-center relative"
+                      style={{
+                        background: color ? getVinylBackground(color.type, color.primary, color.secondary, color.splatterSize, color.tertiary, color.quaternary) : "#1a1a1a",
+                        border: "2px solid rgba(255,255,255,0.2)",
+                        zIndex: 30 - i
+                      }}
+                    >
+                      <div className="w-2 h-2 rounded-full bg-black/20" />
+                      {/* Number indicator for multi-disc */}
                       <span className="absolute -bottom-1 -right-1 bg-black text-[8px] text-white px-1 rounded-full border border-white/20">
                         {i + 1}
                       </span>
-                    )}
-                  </div>
-                )
-              })
-            )}
-          </button>
+                    </div>
+                  )
+                })
+              )}
+            </button>
+          )}
 
           {vinyl.cover_image ? (
             <Image
@@ -147,6 +189,40 @@ export function VinylCard({ vinyl, onUpdate, variant = "default" }: VinylCardPro
             <p className="text-text-tertiary text-xs">{vinyl.genre}</p>
             <span className="text-[10px] bg-surface border border-border px-1.5 rounded text-text-secondary">{discCount}xLP</span>
           </div>
+
+          {(vinyl.gifted_by_username || vinyl.shared_with_username) && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {vinyl.gifted_by_username && (
+                <span className="text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  🎁 {vinyl.gifted_by_username}
+                </span>
+              )}
+              {vinyl.shared_with_username && (
+                <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  🤝 {vinyl.shared_with_username}
+                </span>
+              )}
+              {vinyl.owner_username && vinyl.user_id !== vinyl.shared_with_user_id && (
+                /* Logic: If I am the shared_with user, I want to see who owns it. 
+                   The backend returns owner_username. 
+                   If I am viewing my collection, and I see a shared vinyl, user_id will be the owner's ID, and shared_with_user_id will be MY ID.
+                   So if vinyl.user_id != vinyl.shared_with_user_id (which is always true for shared items), 
+                   AND I am the one it is shared with (checked via context or just display it if present).
+                   Actually, simpler: if owner_username is present and NOT the same as the profile user? 
+                   Wait, for "My Collection", I am the profile user. 
+                   If I am viewing someone else's profile, and they have a shared vinyl, I should see "Partagé par [Owner]".
+                */
+                <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  🔗 Partagé par {(currentUsername && vinyl.owner_username && vinyl.owner_username.toLowerCase() === currentUsername.toLowerCase()) ? "vous" : vinyl.owner_username}
+                </span>
+              )}
+              {vinyl.gifted_to_username && (
+                <span className="text-[10px] bg-green-500/10 text-green-400 border border-green-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  🎁 Offert à {vinyl.gifted_to_username}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {showDelete && (
@@ -170,7 +246,7 @@ export function VinylCard({ vinyl, onUpdate, variant = "default" }: VinylCardPro
           </div>
         )}
 
-        {!showDelete && (
+        {!showDelete && !selectable && !readOnly && (
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -192,6 +268,8 @@ export function VinylCard({ vinyl, onUpdate, variant = "default" }: VinylCardPro
         <VinylColorPicker
           initialColor={colorData || vinyl.vinyl_color}
           discCount={discCount}
+          initialGiftedBy={vinyl.gifted_by_user_id}
+          initialSharedWith={vinyl.shared_with_user_id}
           onSave={handleColorSave}
           onClose={() => setShowColorPicker(false)}
         />

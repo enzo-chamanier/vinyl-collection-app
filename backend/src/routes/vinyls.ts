@@ -9,7 +9,16 @@ const router = Router();
 router.get("/my-collection", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const result = await query(
-      "SELECT * FROM vinyls WHERE user_id = $1 ORDER BY date_added DESC",
+      `SELECT v.*, 
+              u_gift.username as gifted_by_username, 
+              u_share.username as shared_with_username,
+              u_owner.username as owner_username
+       FROM vinyls v
+       JOIN users u_owner ON v.user_id = u_owner.id
+       LEFT JOIN users u_gift ON v.gifted_by_user_id = u_gift.id
+       LEFT JOIN users u_share ON v.shared_with_user_id = u_share.id
+       WHERE v.user_id = $1 OR v.shared_with_user_id = $1
+       ORDER BY v.date_added DESC`,
       [req.user?.userId]
     );
     return res.json(result.rows);
@@ -34,14 +43,16 @@ router.post("/add", authMiddleware, async (req: AuthRequest, res: Response) => {
       rating,
       vinylColor,
       discCount,
+      giftedByUserId,
+      sharedWithUserId
     } = req.body;
 
     const vinylId = uuidv4();
     const newVinyl = await query(
       `INSERT INTO vinyls 
-      (id, user_id, title, artist, genre, release_year, barcode, discogs_id, cover_image, notes, rating, vinyl_color, disc_count, date_added, updated_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW(),NOW()) RETURNING *`,
-      [vinylId, req.user?.userId, title, artist, genre, releaseYear, barcode, discogsId, coverImage, notes, rating, vinylColor, discCount || 1]
+      (id, user_id, title, artist, genre, release_year, barcode, discogs_id, cover_image, notes, rating, vinyl_color, disc_count, gifted_by_user_id, shared_with_user_id, date_added, updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW(),NOW()) RETURNING *`,
+      [vinylId, req.user?.userId, title, artist, genre, releaseYear, barcode, discogsId, coverImage, notes, rating, vinylColor, discCount || 1, giftedByUserId || null, sharedWithUserId || null]
     );
 
     return res.status(201).json(newVinyl.rows[0]);
@@ -70,6 +81,8 @@ router.put("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
       rating,
       vinylColor,
       discCount,
+      giftedByUserId,
+      sharedWithUserId
     } = req.body;
 
     const updatedVinyl = await query(
@@ -83,10 +96,12 @@ router.put("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
         rating = $7,
         vinyl_color = $8,
         disc_count = $9,
+        gifted_by_user_id = $10,
+        shared_with_user_id = $11,
         updated_at = NOW()
-      WHERE id = $10 AND user_id = $11
+      WHERE id = $12 AND user_id = $13
       RETURNING *`,
-      [title, artist, genre, releaseYear, coverImage, notes, rating, vinylColor, discCount || 1, id, req.user?.userId]
+      [title, artist, genre, releaseYear, coverImage, notes, rating, vinylColor, discCount || 1, giftedByUserId || null, sharedWithUserId || null, id, req.user?.userId]
     );
 
     if (updatedVinyl.rows.length === 0) {

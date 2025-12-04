@@ -1,4 +1,5 @@
 import { VinylColorData, getVinylBackground } from "../vinyl/vinyl-color-picker"
+import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 
 interface FeedItem {
   id: string
@@ -21,7 +22,7 @@ export function VinylFeed({ items, loading }: VinylFeedProps) {
   const feedItems = Array.isArray(items) ? items : []
 
   if (loading) {
-    return <div className="text-center text-text-secondary">Chargement du fil d'actualité...</div>
+    return <FullScreenLoader message="Chargement du fil d'actualité..." />
   }
 
   if (feedItems.length === 0) {

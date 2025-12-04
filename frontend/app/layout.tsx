@@ -1,6 +1,8 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Geist } from "next/font/google"
+import { PWAReloadPrompt } from "@/components/pwa/pwa-reload-prompt"
+
 import "./globals.css"
 
 const geistSans = Geist({ subsets: ["latin"] })
@@ -35,7 +37,10 @@ export default function RootLayout({
         <link rel="icon" href="/logo.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
-      <body className={`${geistSans.className} antialiased`}>{children}</body>
+      <body className={`${geistSans.className} antialiased`}>
+        {children}
+        <PWAReloadPrompt />
+      </body>
     </html>
   )
 }

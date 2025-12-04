@@ -155,16 +155,14 @@ router.get("/feed/recent", authMiddleware, async (req: AuthRequest, res: Respons
     if (!followerId) return res.status(401).json({ error: "Utilisateur non authentifié" });
 
     const feedRes = await query(
-      `SELECT * FROM (
-        SELECT DISTINCT ON (v.user_id) v.*, u.username, u.profile_picture
-        FROM vinyls v
-        INNER JOIN users u ON v.user_id = u.id
-        INNER JOIN follows f ON u.id = f.following_id
-        WHERE f.follower_id = $1
-        ORDER BY v.user_id, v.date_added DESC
-      ) t
-      ORDER BY t.date_added DESC
-      LIMIT 50`,
+      `SELECT v.*, u.username, u.profile_picture
+       FROM vinyls v
+       INNER JOIN users u ON v.user_id = u.id
+       INNER JOIN follows f ON u.id = f.following_id
+       WHERE f.follower_id = $1
+         AND v.date_added >= NOW() - INTERVAL '7 days'
+       ORDER BY v.date_added DESC
+       LIMIT 50`,
       [followerId]
     );
 
