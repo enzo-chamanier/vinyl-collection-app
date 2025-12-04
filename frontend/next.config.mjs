@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
+  output: 'export', // <-- ajouté pour export statique
   experimental: {
     optimizePackageImports: ['@radix-ui/react-icons'],
   },

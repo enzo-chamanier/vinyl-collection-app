@@ -4,16 +4,19 @@
   "description": "VinylStack - Vinyl collection manager PWA",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build ",
     "start": "next start",
+    "export": "next export",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "babel-plugin-react-compiler": "^1.0.0",
+    "lucide-react": "^0.555.0",
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-qr-reader": "^3.0.0-beta-1",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {

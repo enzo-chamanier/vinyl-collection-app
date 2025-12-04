@@ -2,7 +2,7 @@ export const GENRES = [
   "Rock",
   "Pop",
   "Jazz",
-  "Hip-Hop",
+  "Hip Hop",
   "Electronic",
   "Classical",
   "Soul",
@@ -18,6 +18,6 @@ export const GENRES = [
   "Other",
 ] as const
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL 
 
 export const VINYL_PLACEHOLDER = "/vinyl-record-cover.jpg"

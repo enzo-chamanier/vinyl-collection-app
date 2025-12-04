@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { api } from "@/lib/api"
 
 interface UserCardProps {
@@ -52,7 +53,7 @@ export function UserCard({ user }: UserCardProps) {
         setStats(prev => prev ? { ...prev, followers: prev.followers + 1 } : prev)
       } else {
         // Se désabonner
-        await api.delete(`/followers/unfollow/${user.id}` )
+        await api.delete(`/followers/unfollow/${user.id}`)
         setFollowing(false)
         setStats(prev => prev ? { ...prev, followers: prev.followers - 1 } : prev)
       }
@@ -66,7 +67,7 @@ export function UserCard({ user }: UserCardProps) {
   return (
     <div className="bg-surface rounded-lg p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <Link href={`/profile/view?username=${user.username}`} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
           {user.profile_picture ? (
             <img
               src={user.profile_picture}
@@ -83,7 +84,7 @@ export function UserCard({ user }: UserCardProps) {
             <h3 className="font-semibold">{user.username}</h3>
             <p className="text-text-secondary text-sm">Voir la collection</p>
           </div>
-        </div>
+        </Link>
 
         {/* Bouton abonné / s'abonner */}
         {following !== null && (

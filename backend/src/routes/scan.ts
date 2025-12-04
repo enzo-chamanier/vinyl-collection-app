@@ -34,6 +34,8 @@ router.post("/barcode", authMiddleware, async (req: AuthRequest, res: Response) 
         ? release.images[0].uri
         : undefined
 
+    const vinylColor = discogsService.extractColor(release.formats || [])
+
     return res.json({
       title: release.title,
       artist: artistName,
@@ -43,6 +45,8 @@ router.post("/barcode", authMiddleware, async (req: AuthRequest, res: Response) 
       discogsId: release.id.toString(),
       coverImage,
       genres: release.genres,
+      vinylColor,
+      discCount: release.discCount || 1,
     })
   } catch (error) {
     console.error(error)
@@ -80,6 +84,8 @@ router.post("/search", async (req: Request, res: Response) => {
         ? release.images[0].uri
         : undefined
 
+    const vinylColor = discogsService.extractColor(release.formats || [])
+
     return res.json({
       title: release.title,
       artist: artistName,
@@ -88,6 +94,7 @@ router.post("/search", async (req: Request, res: Response) => {
       discogsId: release.id.toString(),
       coverImage,
       genres: release.genres,
+      vinylColor,
     })
   } catch (error) {
     console.error(error)

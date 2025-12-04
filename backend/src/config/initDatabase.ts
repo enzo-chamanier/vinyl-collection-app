@@ -32,9 +32,33 @@ export async function initDatabase() {
             cover_image TEXT,
             notes TEXT,
             rating INT CHECK (rating >= 0 AND rating <= 5),
+            vinyl_color TEXT,
             date_added TIMESTAMP DEFAULT NOW(),
             updated_at TIMESTAMP DEFAULT NOW()
         );
+        `);
+
+        // Add vinyl_color column if it doesn't exist (migration)
+        await query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='vinyls' AND column_name='vinyl_color') THEN 
+                    ALTER TABLE vinyls ADD COLUMN vinyl_color TEXT; 
+                END IF; 
+            END $$;
+        `);
+
+        // Add disc_count column if it doesn't exist (migration)
+        await query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='vinyls' AND column_name='disc_count') THEN 
+                    ALTER TABLE vinyls ADD COLUMN disc_count INT DEFAULT 1; 
+                END IF; 
+            END $$;
+        `);
+
+        await query(`
         CREATE INDEX IF NOT EXISTS idx_vinyls_user_id ON vinyls(user_id);
         CREATE INDEX IF NOT EXISTS idx_vinyls_genre ON vinyls(genre);
         CREATE INDEX IF NOT EXISTS idx_vinyls_artist ON vinyls(artist);

@@ -1,8 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { api } from "@/lib/api"
+import { FollowListModal } from "./follow-list-modal"
 
 interface ProfileCardProps {
   profile: any
@@ -21,6 +22,7 @@ export function ProfileCard({ profile, isOwnProfile = false, onUpdate }: Profile
 
   const [isFollowing, setIsFollowing] = useState(false)
   const [loadingFollow, setLoadingFollow] = useState(false)
+  const [modalType, setModalType] = useState<"followers" | "following" | null>(null)
 
   // // 🟦 Charger si on suit déjà l'utilisateur
   // useEffect(() => {
@@ -86,116 +88,154 @@ export function ProfileCard({ profile, isOwnProfile = false, onUpdate }: Profile
   }
 
   return (
-    <div className="bg-surface rounded-lg p-6 mb-8">
-      <div className="flex items-start justify-between gap-4 mb-6">
-        
-        {/* ---- Informations du profil ---- */}
-        <div>
-          <h1 className="text-3xl font-bold mb-2">{profile.user.username}</h1>
-          <p className="text-text-secondary mb-2">{profile.user.bio || "Pas de bio disponible."}</p>
-          <p className="text-text-tertiary text-sm">
-            {formData.isPublic ? "🌍 Profil public" : "🔒 Profil privé"}
-          </p>
-        </div>
+    <>
+      <div className="bg-surface rounded-xl p-6 mb-8 border border-border">
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          {/* Avatar */}
+          <div className="relative">
+            {profile.user.profile_picture ? (
+              <img
+                src={profile.user.profile_picture}
+                alt={profile.user.username}
+                className="w-24 h-24 rounded-full object-cover border-4 border-background"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-3xl font-bold border-4 border-background">
+                {profile.user.username.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
 
-        {/* ---- Bouton S'abonner / Abonné ---- */}
-        {!isOwnProfile && (
-          <button
-            onClick={isFollowing ? handleUnfollow : handleFollow}
-            disabled={loadingFollow}
-            className={`
-              px-4 py-2 rounded font-semibold transition border 
-              disabled:opacity-50 disabled:cursor-not-allowed
-              ${
-                isFollowing
-                  ? "bg-surface border-primary text-primary hover:bg-surface/80"
-                  : "bg-primary text-white border-primary hover:bg-primary/90"
-              }
-            `}
-          >
-            {loadingFollow ? "Chargement..." : isFollowing ? "Abonné" : "S'abonner"}
-          </button>
-        )}
-      </div>
+          {/* Info & Stats */}
+          <div className="flex-1 text-center md:text-left w-full">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-1">{profile.user.username}</h1>
+                {!editing && (
+                  <>
+                    <p className="text-text-secondary text-sm mb-2">{profile.user.bio || "Pas de bio disponible."}</p>
+                    <div className="flex items-center justify-center md:justify-start gap-2 text-xs text-text-tertiary">
+                      <span>{formData.isPublic ? "🌍 Public" : "🔒 Privé"}</span>
+                    </div>
+                  </>
+                )}
+              </div>
 
-      {/* ---- Stats ---- */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-background rounded p-3 text-center">
-          <p className="text-2xl font-bold text-primary">{profile.stats?.total || 0}</p>
-          <p className="text-text-secondary text-sm">Vinyles</p>
-        </div>
+              {/* Action Buttons */}
+              <div className="flex gap-2 justify-center md:justify-end">
+                {isOwnProfile && !editing && (
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="bg-secondary/10 hover:bg-secondary/20 text-primary border border-primary/20 px-4 py-2 rounded-lg font-medium transition text-sm"
+                  >
+                    Modifier
+                  </button>
+                )}
 
-        {/* Tu mettras ici plus tard les vrais stats followers/following */}
-        <div className="bg-background rounded p-3 text-center">
-          <p className="text-2xl text-primary font-bold text-accent">0</p>
-          <p className="text-text-secondary text-sm">Abonnés</p>
-        </div>
-        <div className="bg-background rounded p-3 text-center">
-          <p className="text-2xl text-primary font-bold">0</p>
-          <p className="text-text-secondary text-sm">Abonnements</p>
-        </div>
-      </div>
+                {!isOwnProfile && (
+                  <button
+                    onClick={isFollowing ? handleUnfollow : handleFollow}
+                    disabled={loadingFollow}
+                    className={`px-6 py-2 rounded-lg font-semibold transition text-sm ${isFollowing
+                      ? "bg-surface border border-primary text-primary hover:bg-surface/80"
+                      : "bg-primary text-white hover:bg-primary/90"
+                      }`}
+                  >
+                    {loadingFollow ? "..." : isFollowing ? "Abonné" : "S'abonner"}
+                  </button>
+                )}
+              </div>
+            </div>
 
-      {/* ---- Mode édition ---- */}
-      {isOwnProfile && editing && (
-        <div className="space-y-4">
-          <input
-            type="text"
-            name="username"
-            placeholder="Nom d'utilisateur"
-            value={formData.username}
-            onChange={handleChange}
-            className="w-full"
-          />
+            {/* Stats */}
+            {!editing && (
+              <div className="flex items-center justify-center md:justify-start gap-8 border-t border-border pt-4 mt-2">
+                <div className="text-center">
+                  <span className="block text-xl font-bold text-white">{profile.stats?.total || 0}</span>
+                  <span className="text-xs text-text-secondary uppercase tracking-wider">Vinyles</span>
+                </div>
+                <button
+                  onClick={() => setModalType("followers")}
+                  className="text-center hover:opacity-80 transition-opacity"
+                >
+                  <span className="block text-xl font-bold text-white">{profile.followersCount || 0}</span>
+                  <span className="text-xs text-text-secondary uppercase tracking-wider">Abonnés</span>
+                </button>
+                <button
+                  onClick={() => setModalType("following")}
+                  className="text-center hover:opacity-80 transition-opacity"
+                >
+                  <span className="block text-xl font-bold text-white">{profile.followingCount || 0}</span>
+                  <span className="text-xs text-text-secondary uppercase tracking-wider">Abonnements</span>
+                </button>
+              </div>
+            )}
 
-          <textarea
-            name="bio"
-            placeholder="Votre bio..."
-            value={formData.bio}
-            onChange={handleChange}
-            rows={3}
-            className="w-full rounded border border-border bg-background text-text-primary p-3"
-          />
+            {/* Edit Form */}
+            {isOwnProfile && editing && (
+              <div className="space-y-4 bg-background/50 p-4 rounded-lg border border-border mt-2">
+                <div className="grid gap-4">
+                  <div>
+                    <label className="block text-xs text-text-secondary mb-1">Nom d'utilisateur</label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleChange}
+                      className="w-full bg-black border border-border rounded px-3 py-2 text-sm focus:border-primary outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-text-secondary mb-1">Bio</label>
+                    <textarea
+                      name="bio"
+                      value={formData.bio}
+                      onChange={handleChange}
+                      rows={2}
+                      className="w-full bg-black border border-border rounded px-3 py-2 text-sm focus:border-primary outline-none resize-none"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="isPublic"
+                      checked={formData.isPublic}
+                      onChange={handleChange}
+                      className="rounded border-border bg-black text-primary focus:ring-primary"
+                    />
+                    Rendre le profil public
+                  </label>
+                </div>
 
-          <label className="flex items-center gap-2 text-text-secondary">
-            <input
-              type="checkbox"
-              name="isPublic"
-              checked={formData.isPublic}
-              onChange={handleChange}
-              className="w-4 h-4"
-            />
-            Rendre le profil public
-          </label>
-
-          <div className="flex gap-2">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 bg-gray-200 hover:bg-gray-300/90 text-black font-semibold py-2 rounded transition disabled:opacity-50"
-            >
-              {saving ? "Enregistrement..." : "Enregistrer"}
-            </button>
-
-            <button
-              onClick={() => setEditing(false)}
-              className="flex-1 bg-surface hover:bg-surface/80 text-text-primary font-semibold py-2 rounded transition border border-border"
-            >
-              Annuler
-            </button>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 bg-primary hover:bg-primary/90 text-white font-medium py-2 rounded text-sm transition"
+                  >
+                    {saving ? "Enregistrement..." : "Enregistrer"}
+                  </button>
+                  <button
+                    onClick={() => setEditing(false)}
+                    className="flex-1 bg-surface hover:bg-surface/80 text-text-primary font-medium py-2 rounded text-sm transition border border-border"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* ---- Bouton pour activer l'édition ---- */}
-      {isOwnProfile && !editing && (
-        <button
-          onClick={() => setEditing(true)}
-          className="w-full bg-secondary hover:bg-secondary/80 text-primary font-semibold py-2 rounded transition"
-        >
-          Modifier le Profil
-        </button>
+      {profile?.user?.id && (
+        <FollowListModal
+          userId={profile.user.id}
+          type={modalType || "followers"}
+          isOpen={!!modalType}
+          onClose={() => setModalType(null)}
+        />
       )}
-    </div>
+    </>
   )
 }

@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { useState } from "react"
+import { MobileNav } from "./mobile-nav"
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -13,7 +13,6 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleLogout = () => {
     localStorage.removeItem("token")
@@ -35,7 +34,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="bg-surface border-b border-border sticky top-0 z-50">
+      <header className="bg-surface border-b border-border md:sticky md:top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="VinylStack Logo" className="w-8 h-8" />
@@ -50,9 +49,8 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`font-semibold transition ${
-                  isActive(item.href) ? "text-white" : "text-text-secondary hover:text-text-primary"
-                }`}
+                className={`font-semibold transition ${isActive(item.href) ? "text-white" : "text-text-secondary hover:text-text-primary"
+                  }`}
               >
                 {item.label}
               </Link>
@@ -64,43 +62,18 @@ export function AppLayout({ children }: AppLayoutProps) {
               Déconnexion
             </button>
           </nav>
-
-          {/* Mobile Menu Button */}
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden text-text-primary">
-            ☰
-          </button>
         </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <nav className="md:hidden bg-surface border-t border-border px-4 py-4 space-y-2">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="block font-semibold text-text-primary hover:text-primary transition py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
-            <button
-              onClick={handleLogout}
-              className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-2 rounded transition mt-2"
-            >
-              Déconnexion
-            </button>
-          </nav>
-        )}
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 bg-background">
+      <main className="flex-1 bg-background pb-16 md:pb-0">
         <div className="max-w-7xl mx-auto px-4 py-8">{children}</div>
       </main>
 
+      <MobileNav />
+
       {/* Footer */}
-      <footer className="bg-surface border-t border-border mt-12">
+      <footer className="bg-surface border-t border-border mt-12 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 py-6 text-center text-text-secondary text-sm">
           © 2025 VinylStack. Construisez votre collection, partagez votre passion.
         </div>

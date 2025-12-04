@@ -4,6 +4,7 @@ interface Stats {
   total: number
   genres: Array<{ name: string; count: number }>
   topArtists: Array<{ name: string; count: number }>
+  totalArtists: number
 }
 
 interface CollectionStatsProps {
@@ -29,7 +30,7 @@ export function CollectionStats({ stats }: CollectionStatsProps) {
 
           <div className="bg-gradient-to-br from-secondary to-secondary/60 rounded-lg p-4 text-white">
             <p className="text-text-tertiary text-sm mb-1">Artistes différents</p>
-            <p className="text-4xl font-bold text-gray-500">{stats.topArtists.length}</p>
+            <p className="text-4xl font-bold text-gray-500">{stats.totalArtists}</p>
           </div>
         </div>
       </div>
@@ -64,7 +65,7 @@ export function CollectionStats({ stats }: CollectionStatsProps) {
               <div key={artist.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-text-secondary font-bold">{idx + 1}.</span>
-                  <span className="text-text-secondary">{artist.name}</span>
+                  <span className="text-text-secondary">{artist.name.replace(/\s*\([^)]*\)/g, "")}</span>
                 </div>
                 <span className="text-accent font-semibold">{artist.count}</span>
               </div>

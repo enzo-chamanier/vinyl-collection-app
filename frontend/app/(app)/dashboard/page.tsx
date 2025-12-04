@@ -12,6 +12,7 @@ interface CollectionStatsType {
   total: number
   genres: { name: string; count: number }[]
   topArtists: { name: string; count: number }[]
+  totalArtists: number
 }
 
 export default function DashboardPage() {
@@ -21,7 +22,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<CollectionStatsType | null>(null)
 
   useEffect(() => {
-    const checkAuth = () => { 
+    const checkAuth = () => {
       const token = localStorage.getItem("token")
       if (!token) {
         router.push("/login")
@@ -50,8 +51,13 @@ export default function DashboardPage() {
     const artistCount: Record<string, number> = {}
 
     vinyls.forEach((vinyl) => {
-      genreCount[vinyl.genre] = (genreCount[vinyl.genre] || 0) + 1
-      artistCount[vinyl.artist] = (artistCount[vinyl.artist] || 0) + 1
+      const genres = vinyl.genre ? vinyl.genre.split(",").map((g: string) => g.trim()) : ["Inconnu"]
+      genres.forEach((g: string) => {
+        if (g) genreCount[g] = (genreCount[g] || 0) + 1
+      })
+
+      const artistName = vinyl.artist ? vinyl.artist.replace(/\s*\([^)]*\)/g, "") : "Inconnu"
+      artistCount[artistName] = (artistCount[artistName] || 0) + 1
     })
 
     setStats({
@@ -61,6 +67,7 @@ export default function DashboardPage() {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
         .map(([name, count]) => ({ name, count })),
+      totalArtists: Object.keys(artistCount).length
     })
 
   }

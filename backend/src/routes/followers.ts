@@ -136,8 +136,8 @@ router.get("/search/:searchQuery", async (req: AuthRequest, res: Response) => {
           AND is_public = true
           ${currentUserId ? "AND id != $5" : ""}
         LIMIT $3 OFFSET $4`,
-      currentUserId 
-        ? [`%${searchQuery}%`, `%${searchQuery}%`, limit, offset, currentUserId] 
+      currentUserId
+        ? [`%${searchQuery}%`, `%${searchQuery}%`, limit, offset, currentUserId]
         : [`%${searchQuery}%`, `%${searchQuery}%`, limit, offset]
     );
 
@@ -155,17 +155,20 @@ router.get("/feed/recent", authMiddleware, async (req: AuthRequest, res: Respons
     if (!followerId) return res.status(401).json({ error: "Utilisateur non authentifié" });
 
     const feedRes = await query(
-      `SELECT v.*, u.username, u.profile_picture
+      `SELECT * FROM (
+        SELECT DISTINCT ON (v.user_id) v.*, u.username, u.profile_picture
         FROM vinyls v
         INNER JOIN users u ON v.user_id = u.id
         INNER JOIN follows f ON u.id = f.following_id
         WHERE f.follower_id = $1
-        ORDER BY v.date_added DESC
-        LIMIT 50`,
+        ORDER BY v.user_id, v.date_added DESC
+      ) t
+      ORDER BY t.date_added DESC
+      LIMIT 50`,
       [followerId]
     );
 
-    return res.json(feedRes);
+    return res.json(feedRes.rows);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erreur lors de la récupération du flux" });

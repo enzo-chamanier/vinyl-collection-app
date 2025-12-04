@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
 
 interface BarcodeScannerProps {
@@ -10,71 +10,52 @@ interface BarcodeScannerProps {
 }
 
 export function BarcodeScanner({ onVinylFound }: BarcodeScannerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const [scanning, setScanning] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [lastScanned, setLastScanned] = useState<string | null>(null)
+
+  // Dynamic import to avoid SSR issues with react-qr-reader
+  const [QrReader, setQrReader] = useState<any>(null)
 
   useEffect(() => {
-    if (scanning) {
-      startScanning()
-    }
-    return () => {
-      stopScanning()
-    }
-  }, [scanning])
+    import("react-qr-reader").then((mod) => {
+      setQrReader(() => mod.QrReader)
+    })
+  }, [])
 
-  const startScanning = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      })
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        scanFrame()
+  const handleScan = async (result: any, error: any) => {
+    if (result) {
+      const code = result?.text
+      if (code && code !== lastScanned) {
+        setLastScanned(code)
+        setScanning(false)
+        await processBarcode(code)
       }
-    } catch (err) {
-      setError("Camera access denied")
+    }
+    if (error) {
+      // console.info(error)
     }
   }
 
-  const stopScanning = () => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
-      stream.getTracks().forEach((track) => track.stop())
-    }
-  }
-
-  const scanFrame = () => {
-    if (!videoRef.current || !canvasRef.current || !scanning) return
-
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    canvas.width = videoRef.current.videoWidth
-    canvas.height = videoRef.current.videoHeight
-    ctx.drawImage(videoRef.current, 0, 0)
-
-    // Simulate barcode detection (in production, use jsQR or similar)
-    setTimeout(scanFrame, 100)
-  }
-
-  const handleManualBarcode = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const barcode = formData.get("barcode") as string
-
+  const processBarcode = async (barcode: string) => {
     setLoading(true)
     try {
       const vinyl = await api.post("/scan/barcode", { barcode })
       onVinylFound(vinyl)
     } catch (err: any) {
       setError(err.message || "Vinyl not found")
+      setLastScanned(null) // Reset to allow rescanning
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleManualBarcode = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const barcode = formData.get("barcode") as string
+    await processBarcode(barcode)
   }
 
   return (
@@ -87,22 +68,34 @@ export function BarcodeScanner({ onVinylFound }: BarcodeScannerProps) {
           Démarrer la Caméra
         </button>
       ) : (
-        <>
+        <div className="relative">
+          {QrReader && (
+            <QrReader
+              onResult={handleScan}
+              constraints={{ facingMode: "environment" }}
+              className="w-full rounded-lg overflow-hidden"
+            />
+          )}
           <button
             onClick={() => setScanning(false)}
-            className="w-full bg-surface hover:bg-surface/80 text-text-primary font-semibold py-2 rounded transition"
+            className="absolute top-2 right-2 bg-black/50 text-white px-3 py-1 rounded"
           >
-            Arrêter la Caméra
+            Fermer
           </button>
-          <video ref={videoRef} autoPlay playsInline className="w-full rounded-lg bg-black" />
-          <canvas ref={canvasRef} className="hidden" />
-        </>
+          <div className="absolute inset-0 border-2 border-primary opacity-50 pointer-events-none" />
+        </div>
       )}
 
       <div className="my-4 text-center text-text-secondary">ou</div>
 
       <form onSubmit={handleManualBarcode} className="space-y-3">
-        <input type="text" name="barcode" placeholder="Entrez le code-barres manuellement" className="w-full text-text-secondary bg-black border-border rounded h-10 px-3" required />
+        <input
+          type="text"
+          name="barcode"
+          placeholder="Entrez le code-barres manuellement"
+          className="w-full text-text-secondary bg-black border-border rounded h-10 px-3"
+          required
+        />
         <button
           type="submit"
           disabled={loading}
