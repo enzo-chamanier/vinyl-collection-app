@@ -9,7 +9,7 @@ import { api } from "@/lib/api"
 export default function FriendsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
-  const [following, _setFollowing] = useState([])
+  const [following, setFollowing] = useState([])
   const [searching, setSearching] = useState(false)
 
   useEffect(() => {
@@ -19,6 +19,21 @@ export default function FriendsPage() {
       setSearchResults([])
     }
   }, [searchQuery])
+
+  useEffect(() => {
+    const fetchFollowing = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem("user") || "{}")
+        if (user.id) {
+          const res = await api.get(`/followers/following/${user.id}`)
+          setFollowing(res)
+        }
+      } catch (error) {
+        console.error("Error fetching following:", error)
+      }
+    }
+    fetchFollowing()
+  }, [])
 
   const handleSearch = async () => {
     setSearching(true)

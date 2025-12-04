@@ -80,12 +80,12 @@ router.get("/following/:userId", async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     const followingRes = await query(
-      `SELECT u.id, u.username, u.profile_picture, COUNT(v.id) AS vinyl_count
+      `SELECT u.id, u.username, u.profile_picture, u.bio, u.is_public, COUNT(v.id) AS vinyl_count
         FROM users u
         INNER JOIN follows f ON u.id = f.following_id
         LEFT JOIN vinyls v ON u.id = v.user_id
         WHERE f.follower_id = $1
-        GROUP BY u.id`,
+        GROUP BY u.id, u.bio, u.is_public`,
       [userId]
     );
     return res.json(followingRes.rows);

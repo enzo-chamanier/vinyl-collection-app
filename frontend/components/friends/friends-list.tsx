@@ -1,5 +1,6 @@
 "use client"
 import Link from "next/link"
+import { ProfilePreviewCard } from "./profile-preview-card"
 interface FriendsListProps {
   following: any[]
 }
@@ -14,14 +15,9 @@ export function FriendsList({ following }: FriendsListProps) {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 md:grid-cols-2">
       {following.map((friend) => (
-        <Link key={friend.id} href={`/profile/${friend.username}`} className="block">
-          <div className="bg-surface rounded-lg p-4 hover:bg-surface/80 transition border border-border">
-            <h3 className="font-semibold text-white">{friend.username}</h3>
-            <p className="text-text-secondary text-sm">{friend.vinyls?.length || 0} vinyles</p>
-          </div>
-        </Link>
+        <ProfilePreviewCard key={friend.id} profile={friend} />
       ))}
     </div>
   )
