@@ -58,6 +58,16 @@ export async function initDatabase() {
             END $$;
         `);
 
+        // Add format column if it doesn't exist (migration)
+        await query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='vinyls' AND column_name='format') THEN 
+                    ALTER TABLE vinyls ADD COLUMN format VARCHAR(20) DEFAULT 'vinyl'; 
+                END IF; 
+            END $$;
+        `);
+
         await query(`
         CREATE INDEX IF NOT EXISTS idx_vinyls_user_id ON vinyls(user_id);
         CREATE INDEX IF NOT EXISTS idx_vinyls_genre ON vinyls(genre);

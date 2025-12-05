@@ -42,6 +42,7 @@ function ProfileContent() {
     const [currentUser, setCurrentUser] = useState<any>(null)
 
     const [searchQuery, setSearchQuery] = useState("")
+    const [selectedFormat, setSelectedFormat] = useState<"all" | "vinyl" | "cd">("all")
     const [groupByArtist, setGroupByArtist] = useState(false)
     const [activeTab, setActiveTab] = useState<"collection" | "gifted_to" | "gifted_by">("collection")
 
@@ -137,11 +138,14 @@ function ProfileContent() {
 
     const filteredVinyls = displayedVinyls.filter((vinyl: any) => {
         const query = searchQuery.toLowerCase()
-        return (
+        const matchesSearch = (
             vinyl.title.toLowerCase().includes(query) ||
             (vinyl.artist && vinyl.artist.toLowerCase().includes(query)) ||
             (vinyl.genre && vinyl.genre.toLowerCase().includes(query))
         )
+        const matchesFormat = selectedFormat === "all" || (vinyl.format || "vinyl") === selectedFormat
+
+        return matchesSearch && matchesFormat
     })
 
     const vinylsByArtist = filteredVinyls.reduce((acc: any, vinyl: any) => {
@@ -157,14 +161,14 @@ function ProfileContent() {
         <div className="max-w-4xl mx-auto">
             <button
                 onClick={() => router.back()}
-                className="flex items-center gap-2 text-black hover:text-text-secondary hover:cursor-pointer mb-4 transition-colors"
+                className="flex items-center gap-2 text-foreground hover:text-muted-foreground hover:cursor-pointer mb-4 transition-colors"
             >
                 <ArrowLeft className="w-5 h-5" />
                 <span>Retour</span>
             </button>
 
             {/* Header Profil */}
-            <div className="bg-surface rounded-xl p-6 mb-8 border border-border">
+            <div className="bg-card rounded-xl p-6 mb-8 border border-border">
                 <div className="flex flex-col md:flex-row items-center gap-6">
                     <div className="relative">
                         {profile.profile_picture ? (
@@ -181,18 +185,18 @@ function ProfileContent() {
                     </div>
 
                     <div className="flex-1 text-center md:text-left">
-                        <h1 className="text-3xl font-bold text-white mb-2">{profile.username}</h1>
-                        <div className="flex items-center justify-center md:justify-start gap-6 text-text-secondary">
+                        <h1 className="text-3xl font-bold text-foreground mb-2">{profile.username}</h1>
+                        <div className="flex items-center justify-center md:justify-start gap-6 text-muted-foreground">
                             <div className="text-center">
-                                <span className="block text-xl font-bold text-white">{profile.followersCount || 0}</span>
+                                <span className="block text-xl font-bold text-foreground">{profile.followersCount || 0}</span>
                                 <span className="text-xs uppercase tracking-wider">Abonnés</span>
                             </div>
                             <div className="text-center">
-                                <span className="block text-xl font-bold text-white">{profile.followingCount || 0}</span>
+                                <span className="block text-xl font-bold text-foreground">{profile.followingCount || 0}</span>
                                 <span className="text-xs uppercase tracking-wider">Abonnements</span>
                             </div>
                             <div className="text-center">
-                                <span className="block text-xl font-bold text-white">{profile.vinyls?.length || 0}</span>
+                                <span className="block text-xl font-bold text-foreground">{profile.vinyls?.length || 0}</span>
                                 <span className="text-xs uppercase tracking-wider">Vinyles</span>
                             </div>
                         </div>
@@ -202,12 +206,12 @@ function ProfileContent() {
 
             {/* Contenu (Collection ou Privé) */}
             {isPrivate ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center bg-surface/50 rounded-xl border border-border border-dashed">
-                    <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mb-4">
-                        <Lock className="w-8 h-8 text-text-secondary" />
+                <div className="flex flex-col items-center justify-center py-16 text-center bg-card/50 rounded-xl border border-border border-dashed">
+                    <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center mb-4">
+                        <Lock className="w-8 h-8 text-muted-foreground" />
                     </div>
-                    <h2 className="text-xl font-semibold text-white mb-2">Ce profil est privé</h2>
-                    <p className="text-text-secondary max-w-md">
+                    <h2 className="text-xl font-semibold text-foreground mb-2">Ce profil est privé</h2>
+                    <p className="text-muted-foreground max-w-md">
                         Abonnez-vous à cet utilisateur pour voir sa collection de vinyles.
                     </p>
                 </div>
@@ -217,19 +221,19 @@ function ProfileContent() {
                         <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
                             <button
                                 onClick={() => setActiveTab("collection")}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "collection" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-white"}`}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "collection" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
                             >
                                 Collection
                             </button>
                             <button
                                 onClick={() => setActiveTab("gifted_to")}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_to" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-white"}`}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_to" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
                             >
                                 Reçus 🎁
                             </button>
                             <button
                                 onClick={() => setActiveTab("gifted_by")}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_by" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-white"}`}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_by" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
                             >
                                 Offerts 💝
                             </button>
@@ -241,14 +245,24 @@ function ProfileContent() {
                                 placeholder="Rechercher un vinyle..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="bg-surface border border-border rounded-lg px-4 py-2 text-sm text-white focus:border-primary outline-none w-full sm:w-64"
+                                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm !text-black dark:!text-white placeholder:text-neutral-500 dark:placeholder:text-neutral-400 focus:border-primary outline-none w-full sm:w-64"
                             />
+
+                            <select
+                                value={selectedFormat}
+                                onChange={(e) => setSelectedFormat(e.target.value as "all" | "vinyl" | "cd")}
+                                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm !text-black dark:!text-white focus:border-primary outline-none"
+                            >
+                                <option value="all">Tous</option>
+                                <option value="vinyl">Vinyles</option>
+                                <option value="cd">CDs</option>
+                            </select>
 
                             <button
                                 onClick={() => setGroupByArtist(!groupByArtist)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition border ${groupByArtist
-                                    ? "bg-primary text-white border-primary"
-                                    : "bg-surface text-text-secondary border-border hover:border-primary"
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "!bg-white dark:!bg-neutral-900 !text-neutral-600 dark:!text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-primary"
                                     }`}
                             >
                                 {groupByArtist ? "Vue par Artiste" : "Vue Grille"}
@@ -259,15 +273,14 @@ function ProfileContent() {
                     {groupByArtist ? (
                         <div className="space-y-8">
                             {Object.entries(vinylsByArtist).map(([artist, vinyls]: [string, any]) => (
-                                <div key={artist} className="bg-black rounded-xl p-6 border border-border/50">
-                                    <h3 className="text-xl font-bold text-white mb-4 border-b border-border pb-2">{artist}</h3>
+                                <div key={artist} className="bg-card rounded-xl p-6 border border-border/50">
+                                    <h3 className="text-xl font-bold text-foreground mb-4 border-b border-border pb-2">{artist}</h3>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                         {vinyls.map((vinyl: any) => (
                                             <VinylCard
                                                 key={vinyl.id}
                                                 vinyl={vinyl}
                                                 onUpdate={fetchProfile}
-                                                variant="dark"
                                                 readOnly={!isOwner || activeTab === "gifted_by"}
                                                 currentUserId={currentUser?.id}
                                                 currentUsername={currentUser?.username}
@@ -284,7 +297,6 @@ function ProfileContent() {
                                     key={vinyl.id}
                                     vinyl={vinyl}
                                     onUpdate={fetchProfile}
-                                    variant="dark"
                                     readOnly={!isOwner || activeTab === "gifted_by"}
                                     currentUserId={currentUser?.id}
                                     currentUsername={currentUser?.username}
@@ -294,7 +306,7 @@ function ProfileContent() {
                     )}
 
                     {filteredVinyls.length === 0 && (
-                        <div className="text-center py-12 text-text-secondary bg-surface/30 rounded-lg">
+                        <div className="text-center py-12 text-muted-foreground bg-card/30 rounded-lg">
                             Aucun vinyle trouvé.
                         </div>
                     )}

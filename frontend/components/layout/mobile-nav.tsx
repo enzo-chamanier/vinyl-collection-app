@@ -45,7 +45,7 @@ export function MobileNav() {
         return (
             <button
                 onClick={scrollToTop}
-                className="md:hidden fixed bottom-6 right-6 bg-primary text-white p-3 rounded-full shadow-lg z-50 animate-in fade-in slide-in-from-bottom-4"
+                className="md:hidden fixed bottom-6 right-6 bg-primary text-primary-foreground p-3 rounded-full shadow-lg z-50 animate-in fade-in slide-in-from-bottom-4"
                 aria-label="Retour en haut"
             >
                 <ArrowUp size={24} />
@@ -54,7 +54,7 @@ export function MobileNav() {
     }
 
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-50 pb-6 animate-in fade-in slide-in-from-bottom-4">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-neutral-950 border-t border-neutral-800 z-50 pb-6 animate-in fade-in slide-in-from-bottom-4">
             <div className="flex justify-around items-center h-16">
                 {navItems.map((item) => {
                     const Icon = item.icon
@@ -64,7 +64,7 @@ export function MobileNav() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${active ? "text-white" : "text-text-secondary hover:text-text-primary"
+                            className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${active ? "text-white" : "text-neutral-500 hover:text-white"
                                 }`}
                         >
                             <Icon size={24} strokeWidth={active ? 2.5 : 2} />

@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Geist } from "next/font/google"
 import { PWAReloadPrompt } from "@/components/pwa/pwa-reload-prompt"
+import { ThemeProvider } from "@/components/theme-provider"
 
 import "./globals.css"
 
@@ -28,9 +29,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
@@ -38,7 +39,14 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className={`${geistSans.className} antialiased`}>
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
         <PWAReloadPrompt />
       </body>
     </html>

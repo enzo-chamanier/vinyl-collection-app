@@ -33,8 +33,8 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-surface border-b border-border md:sticky md:top-0 z-50">
+      {/* Header - Always Dark */}
+      <header className="bg-neutral-950 border-b border-neutral-800 md:sticky md:top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="Discory Logo" className="w-8 h-8" />
@@ -49,7 +49,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`font-semibold transition ${isActive(item.href) ? "text-white" : "text-text-secondary hover:text-text-primary"
+                className={`font-semibold transition ${isActive(item.href) ? "text-white" : "text-neutral-400 hover:text-white"
                   }`}
               >
                 {item.label}
@@ -57,7 +57,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             ))}
             <button
               onClick={handleLogout}
-              className="bg-white hover:bg-white/90 text-black font-semibold px-4 py-2 rounded transition"
+              className="bg-white hover:bg-gray-200 text-black font-semibold px-4 py-2 rounded transition"
             >
               Déconnexion
             </button>
@@ -73,8 +73,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       <MobileNav />
 
       {/* Footer */}
-      <footer className="bg-surface border-t border-border mt-12 hidden md:block">
-        <div className="max-w-7xl mx-auto px-4 py-6 text-center text-text-secondary text-sm">
+      <footer className="bg-neutral-950 border-t border-neutral-800 mt-12 hidden md:block">
+        <div className="max-w-7xl mx-auto px-4 py-6 text-center text-neutral-400 text-sm">
           © 2025 Discory. Construisez votre collection, partagez votre passion.
         </div>
       </footer>

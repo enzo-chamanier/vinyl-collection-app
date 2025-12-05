@@ -22,12 +22,12 @@ interface Vinyl {
   gifted_to_username?: string
   owner_username?: string
   user_id?: string
+  format?: "vinyl" | "cd"
 }
 
 interface VinylCardProps {
   vinyl: Vinyl
   onUpdate: () => void
-  variant?: "default" | "dark"
   selectable?: boolean
   selected?: boolean
   onSelect?: () => void
@@ -39,7 +39,6 @@ interface VinylCardProps {
 export function VinylCard({
   vinyl,
   onUpdate,
-  variant = "default",
   selectable = false,
   selected = false,
   onSelect,
@@ -62,7 +61,7 @@ export function VinylCard({
     }
   }
 
-  const handleColorSave = async (colorData: VinylColorData | VinylColorData[], newDiscCount: number, giftedBy?: string, sharedWith?: string) => {
+  const handleColorSave = async (colorData: VinylColorData | VinylColorData[], newDiscCount: number, giftedBy?: string, sharedWith?: string, format?: "vinyl" | "cd") => {
     try {
       await api.put(`/vinyls/${vinyl.id}`, {
         ...vinyl,
@@ -70,7 +69,8 @@ export function VinylCard({
         vinylColor: JSON.stringify(colorData),
         discCount: newDiscCount,
         giftedByUserId: giftedBy,
-        sharedWithUserId: sharedWith
+        sharedWithUserId: sharedWith,
+        format: format
       })
       onUpdate()
     } catch (error) {
@@ -108,7 +108,7 @@ export function VinylCard({
   return (
     <>
       <div className="group relative">
-        <div className="relative aspect-square bg-surface rounded-lg overflow-hidden">
+        <div className="relative aspect-square bg-card rounded-lg overflow-hidden">
           {selectable && (
             <div
               className={`absolute inset-0 z-30 flex items-center justify-center transition-colors ${selected ? "bg-primary/70" : "bg-black/10 hover:bg-black/70"}`}
@@ -182,11 +182,14 @@ export function VinylCard({
         </div>
 
         <div className="mt-2 ml-2 mb-2">
-          <h3 className={`font-semibold text-sm line-clamp-1 ${variant === "dark" ? "text-white" : "text-black"}`}>{vinyl.title}</h3>
-          <p className="text-text-secondary text-xs">{vinyl.artist.replace(/\s*\([^)]*\)/g, "")}</p>
+          <h3 className={`font-semibold text-sm line-clamp-1 text-foreground`}>{vinyl.title}</h3>
+          <p className="text-muted-foreground text-xs">{vinyl.artist.replace(/\s*\([^)]*\)/g, "")}</p>
           <div className="flex justify-between items-center pr-2">
-            <p className="text-text-tertiary text-xs">{vinyl.genre}</p>
-            <span className="text-[10px] bg-surface border border-border px-1.5 rounded text-text-secondary">{discCount}xLP</span>
+            <p className="text-muted-foreground text-xs">{vinyl.genre}</p>
+            <div className="flex gap-1">
+              <span className="text-[10px] bg-card border border-border px-1.5 rounded text-muted-foreground uppercase">{vinyl.format || "vinyl"}</span>
+              <span className="text-[10px] bg-card border border-border px-1.5 rounded text-muted-foreground">{discCount}x</span>
+            </div>
           </div>
 
           {(vinyl.gifted_by_username || vinyl.shared_with_username) && (
@@ -202,15 +205,6 @@ export function VinylCard({
                 </span>
               )}
               {vinyl.owner_username && vinyl.user_id !== vinyl.shared_with_user_id && (
-                /* Logic: If I am the shared_with user, I want to see who owns it. 
-                   The backend returns owner_username. 
-                   If I am viewing my collection, and I see a shared vinyl, user_id will be the owner's ID, and shared_with_user_id will be MY ID.
-                   So if vinyl.user_id != vinyl.shared_with_user_id (which is always true for shared items), 
-                   AND I am the one it is shared with (checked via context or just display it if present).
-                   Actually, simpler: if owner_username is present and NOT the same as the profile user? 
-                   Wait, for "My Collection", I am the profile user. 
-                   If I am viewing someone else's profile, and they have a shared vinyl, I should see "Partagé par [Owner]".
-                */
                 <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
                   🔗 Partagé par {(currentUsername && vinyl.owner_username && vinyl.owner_username.toLowerCase() === currentUsername.toLowerCase()) ? "vous" : vinyl.owner_username}
                 </span>
@@ -229,7 +223,7 @@ export function VinylCard({
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="flex-1 bg-white hover:bg-white/90 text-black text-xs font-semibold py-2 rounded"
+              className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-semibold py-2 rounded"
             >
               {deleting ? "Supprimer" : "Confirmer"}
             </button>
@@ -238,7 +232,7 @@ export function VinylCard({
                 e.stopPropagation()
                 setShowDelete(false)
               }}
-              className="flex-1 bg-gray-300 hover:bg-gray-300/90 text-black text-xs font-semibold py-2 rounded"
+              className="flex-1 bg-secondary hover:bg-secondary/90 text-secondary-foreground text-xs font-semibold py-2 rounded"
             >
               Annuler
             </button>
@@ -251,7 +245,7 @@ export function VinylCard({
               e.stopPropagation()
               setShowDelete(true)
             }}
-            className="absolute top-2 right-2 bg-black/50 hover:bg-red-500/80 text-white p-1.5 rounded-full transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
+            className="absolute top-2 right-2 bg-black/50 hover:bg-destructive/80 text-white p-1.5 rounded-full transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
             title="Supprimer"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -269,6 +263,7 @@ export function VinylCard({
           discCount={discCount}
           initialGiftedBy={vinyl.gifted_by_user_id}
           initialSharedWith={vinyl.shared_with_user_id}
+          initialFormat={vinyl.format}
           onSave={handleColorSave}
           onClose={() => setShowColorPicker(false)}
         />

@@ -20,16 +20,18 @@ interface VinylColorPickerProps {
     discCount?: number
     initialGiftedBy?: string
     initialSharedWith?: string
-    onSave: (colorData: VinylColorData | VinylColorData[], newDiscCount: number, giftedBy?: string, sharedWith?: string) => void
+    initialFormat?: "vinyl" | "cd"
+    onSave: (colorData: VinylColorData | VinylColorData[], newDiscCount: number, giftedBy?: string, sharedWith?: string, format?: "vinyl" | "cd") => void
     onClose: () => void
 }
 
-export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy, initialSharedWith, onSave, onClose }: VinylColorPickerProps) {
+export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy, initialSharedWith, initialFormat = "vinyl", onSave, onClose }: VinylColorPickerProps) {
     const [activeDisc, setActiveDisc] = useState(0)
     const [colors, setColors] = useState<VinylColorData[]>([])
     const [currentDiscCount, setCurrentDiscCount] = useState(discCount)
     const [giftedBy, setGiftedBy] = useState(initialGiftedBy || "")
     const [sharedWith, setSharedWith] = useState(initialSharedWith || "")
+    const [format, setFormat] = useState<"vinyl" | "cd">(initialFormat)
     const [friends, setFriends] = useState<any[]>([])
     const [activePopover, setActivePopover] = useState<"gift" | "share" | null>(null)
 
@@ -117,35 +119,35 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
 
     const handleSave = () => {
         if (currentDiscCount === 1) {
-            onSave(colors[0], 1, giftedBy, sharedWith)
+            onSave(colors[0], 1, giftedBy, sharedWith, format)
         } else {
-            onSave(colors, currentDiscCount, giftedBy, sharedWith)
+            onSave(colors, currentDiscCount, giftedBy, sharedWith, format)
         }
         onClose()
     }
 
     return (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-surface border border-border rounded-xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-                <div className="flex justify-between items-center p-4 border-b border-border bg-black/20 shrink-0 relative">
-                    <h3 className="text-l font-bold text-white">Personnaliser {currentDiscCount > 1 ? `Disque ${activeDisc + 1}` : "le Vinyle"}</h3>
+            <div className="bg-card border border-border rounded-xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                <div className="flex justify-between items-center p-4 border-b border-border bg-muted/30 shrink-0 relative">
+                    <h3 className="text-l font-bold text-foreground">Personnaliser {currentDiscCount > 1 ? `Disque ${activeDisc + 1}` : "l'Album"}</h3>
                     <div className="flex items-center gap-2">
                         {/* Gift Popover */}
                         <div className="relative">
                             <button
                                 onClick={() => setActivePopover(activePopover === "gift" ? null : "gift")}
-                                className={`p-2 rounded-full transition ${giftedBy ? "text-purple-400 bg-purple-500/10" : "text-text-secondary hover:text-white hover:bg-white/10"}`}
-                                title="Origine du vinyle (Cadeau)"
+                                className={`p-2 rounded-full transition ${giftedBy ? "text-purple-400 bg-purple-500/10" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+                                title="Origine (Cadeau)"
                             >
                                 <Gift size={20} />
                             </button>
                             {activePopover === "gift" && (
-                                <div className="absolute top-full right-0 mt-2 w-64 bg-surface border border-border rounded-lg shadow-xl p-3 z-50 animate-in fade-in zoom-in-95">
-                                    <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Offert par...</label>
+                                <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl p-3 z-50 animate-in fade-in zoom-in-95">
+                                    <label className="text-xs text-muted-foreground uppercase font-bold mb-2 block">Offert par...</label>
                                     <select
                                         value={giftedBy}
                                         onChange={(e) => setGiftedBy(e.target.value)}
-                                        className="w-full bg-black border border-border rounded px-3 py-2 text-white text-sm"
+                                        className="w-full !bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 !text-black dark:!text-white text-sm"
                                         autoFocus
                                     >
                                         <option value="">-- Personne --</option>
@@ -161,18 +163,18 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
                         <div className="relative">
                             <button
                                 onClick={() => setActivePopover(activePopover === "share" ? null : "share")}
-                                className={`p-2 rounded-full transition ${sharedWith ? "text-blue-400 bg-blue-500/10" : "text-text-secondary hover:text-white hover:bg-white/10"}`}
+                                className={`p-2 rounded-full transition ${sharedWith ? "text-blue-400 bg-blue-500/10" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
                                 title="Collection commune"
                             >
                                 <Users size={20} />
                             </button>
                             {activePopover === "share" && (
-                                <div className="absolute top-full right-0 mt-2 w-64 bg-surface border border-border rounded-lg shadow-xl p-3 z-50 animate-in fade-in zoom-in-95">
-                                    <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Partager avec...</label>
+                                <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl p-3 z-50 animate-in fade-in zoom-in-95">
+                                    <label className="text-xs text-muted-foreground uppercase font-bold mb-2 block">Partager avec...</label>
                                     <select
                                         value={sharedWith}
                                         onChange={(e) => setSharedWith(e.target.value)}
-                                        className="w-full bg-black border border-border rounded px-3 py-2 text-white text-sm"
+                                        className="w-full !bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 !text-black dark:!text-white text-sm"
                                         autoFocus
                                     >
                                         <option value="">-- Personne --</option>
@@ -186,21 +188,33 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
 
                         <div className="w-px h-6 bg-border mx-1" />
 
-                        <button onClick={onClose} className="text-text-secondary hover:text-white transition">
+                        {/* Format Selector */}
+                        <select
+                            value={format}
+                            onChange={(e) => setFormat(e.target.value as "vinyl" | "cd")}
+                            className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 !text-black dark:!text-white text-xs uppercase font-bold"
+                        >
+                            <option value="vinyl">Vinyl</option>
+                            <option value="cd">CD</option>
+                        </select>
+
+                        <div className="w-px h-6 bg-border mx-1" />
+
+                        <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition">
                             <X size={20} />
                         </button>
                     </div>
                 </div>
 
                 {/* Disc Tabs */}
-                <div className="flex overflow-x-auto border-b border-border bg-black/10 shrink-0 no-scrollbar">
+                <div className="flex overflow-x-auto border-b border-border bg-muted/20 shrink-0 no-scrollbar">
                     {Array.from({ length: currentDiscCount }).map((_, i) => (
                         <button
                             key={i}
                             onClick={() => setActiveDisc(i)}
                             className={`flex-1 min-w-[80px] py-3 text-xs font-bold uppercase tracking-wider transition border-b-2 flex items-center justify-center gap-2 ${activeDisc === i
-                                ? "border-primary text-white bg-white/5"
-                                : "border-transparent text-text-secondary hover:text-white hover:bg-white/5"
+                                ? "border-primary text-foreground bg-muted/50"
+                                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
                                 }`}
                         >
                             Disque {i + 1}
@@ -208,7 +222,7 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
                     ))}
                     <button
                         onClick={handleAddDisc}
-                        className="px-4 py-3 text-text-secondary hover:text-white hover:bg-white/5 transition border-b-2 border-transparent"
+                        className="px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition border-b-2 border-transparent"
                         title="Ajouter un disque"
                     >
                         +
@@ -226,7 +240,7 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
                             }}
                         >
                             {/* Label */}
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-black rounded-full border-4 border-surface/50 flex items-center justify-center">
+                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-black rounded-full border-4 border-white/20 flex items-center justify-center">
                                 <div className="w-2 h-2 bg-white/20 rounded-full" />
                             </div>
 
@@ -253,8 +267,8 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
                                 key={t}
                                 onClick={() => updateCurrentColor({ type: t })}
                                 className={`py-2 px-1 rounded text-[10px] font-medium capitalize transition ${currentColor.type === t
-                                    ? "bg-primary text-white"
-                                    : "bg-black/40 text-text-secondary hover:bg-black/60"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
                                     }`}
                             >
                                 {t}
@@ -264,14 +278,14 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
 
                     {/* Splatter Size Toggle */}
                     {currentColor.type === "splatter" && (
-                        <div className="flex bg-black/40 p-1 rounded-lg">
+                        <div className="flex bg-muted p-1 rounded-lg">
                             {(["small", "large"] as const).map((size) => (
                                 <button
                                     key={size}
                                     onClick={() => updateCurrentColor({ splatterSize: size })}
                                     className={`flex-1 py-1.5 text-xs font-medium rounded capitalize transition ${(currentColor.splatterSize || "large") === size
-                                        ? "bg-surface text-white shadow-sm"
-                                        : "text-text-secondary hover:text-white"
+                                        ? "bg-background text-foreground shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground"
                                         }`}
                                 >
                                     {size === "small" ? "Petit Splatter" : "Grand Splatter"}
@@ -283,7 +297,7 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
                     {/* Color Pickers */}
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-xs text-text-secondary uppercase font-bold">Couleur Principale</label>
+                            <label className="text-xs text-muted-foreground uppercase font-bold">Couleur Principale</label>
                             <div className="flex gap-3 items-center">
                                 <input
                                     type="color"
@@ -295,14 +309,14 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
                                     type="text"
                                     value={currentColor.primary}
                                     onChange={(e) => updateCurrentColor({ primary: e.target.value })}
-                                    className="flex-1 bg-black border border-border rounded px-3 py-2 text-white text-sm font-mono"
+                                    className="flex-1 !bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 !text-black dark:!text-white text-sm font-mono"
                                 />
                             </div>
                         </div>
 
                         {(currentColor.type === "split" || currentColor.type === "splatter" || currentColor.type === "smoke" || currentColor.type === "striped" || currentColor.type === "quad-split") && (
                             <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                <label className="text-xs text-text-secondary uppercase font-bold">Couleur Secondaire</label>
+                                <label className="text-xs text-muted-foreground uppercase font-bold">Couleur Secondaire</label>
                                 <div className="flex gap-3 items-center">
                                     <input
                                         type="color"
@@ -314,7 +328,7 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
                                         type="text"
                                         value={currentColor.secondary || "#ff0000"}
                                         onChange={(e) => updateCurrentColor({ secondary: e.target.value })}
-                                        className="flex-1 bg-black border border-border rounded px-3 py-2 text-white text-sm font-mono"
+                                        className="flex-1 !bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 !text-black dark:!text-white text-sm font-mono"
                                     />
                                 </div>
                             </div>
@@ -323,7 +337,7 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
                         {currentColor.type === "quad-split" && (
                             <>
                                 <div className="space-y-2 animate-in fade-in slide-in-from-top-3">
-                                    <label className="text-xs text-text-secondary uppercase font-bold">3ème Couleur</label>
+                                    <label className="text-xs text-muted-foreground uppercase font-bold">3ème Couleur</label>
                                     <div className="flex gap-3 items-center">
                                         <input
                                             type="color"
@@ -335,12 +349,12 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
                                             type="text"
                                             value={currentColor.tertiary || "#00ff00"}
                                             onChange={(e) => updateCurrentColor({ tertiary: e.target.value })}
-                                            className="flex-1 bg-black border border-border rounded px-3 py-2 text-white text-sm font-mono"
+                                            className="flex-1 !bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 !text-black dark:!text-white text-sm font-mono"
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-2 animate-in fade-in slide-in-from-top-4">
-                                    <label className="text-xs text-text-secondary uppercase font-bold">4ème Couleur</label>
+                                    <label className="text-xs text-muted-foreground uppercase font-bold">4ème Couleur</label>
                                     <div className="flex gap-3 items-center">
                                         <input
                                             type="color"
@@ -352,7 +366,7 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
                                             type="text"
                                             value={currentColor.quaternary || "#0000ff"}
                                             onChange={(e) => updateCurrentColor({ quaternary: e.target.value })}
-                                            className="flex-1 bg-black border border-border rounded px-3 py-2 text-white text-sm font-mono"
+                                            className="flex-1 !bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 !text-black dark:!text-white text-sm font-mono"
                                         />
                                     </div>
                                 </div>
@@ -362,7 +376,7 @@ export function VinylColorPicker({ initialColor, discCount = 1, initialGiftedBy,
 
                     <button
                         onClick={handleSave}
-                        className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition shrink-0"
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition shrink-0"
                     >
                         <Check size={18} />
                         Sauvegarder

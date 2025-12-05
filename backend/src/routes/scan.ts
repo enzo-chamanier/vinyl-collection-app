@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express"
 import { authMiddleware, type AuthRequest } from "../middleware/auth"
 import { discogsService } from "../services/discogs"
+import { coverArtService } from "../services/coverArt"
 
 const router = Router()
 
@@ -13,10 +14,18 @@ router.post("/barcode", authMiddleware, async (req: AuthRequest, res: Response) 
       return res.status(400).json({ error: "Code-barres requis" })
     }
 
-    const release = await discogsService.searchByBarcode(barcode)
+    let release = await discogsService.searchByBarcode(barcode)
+    let isFromDiscogs = true
+
+    // Fallback to iTunes if not found on Discogs
+    if (!release) {
+      console.log(`Barcode ${barcode} not found on Discogs, trying iTunes...`)
+      release = await coverArtService.searchByUpc(barcode)
+      isFromDiscogs = false
+    }
 
     if (!release) {
-      return res.status(404).json({ error: "Vinyle non trouvé dans la base Discogs" })
+      return res.status(404).json({ error: "Album non trouvé (ni sur Discogs, ni sur iTunes)" })
     }
 
     const artistName =
@@ -29,12 +38,17 @@ router.post("/barcode", authMiddleware, async (req: AuthRequest, res: Response) 
         ? release.genres[0]
         : "Non classifié"
 
-    const coverImage =
+    let coverImage =
       release.images && release.images.length > 0
         ? release.images[0].uri
         : undefined
 
-    const vinylColor = discogsService.extractColor(release.formats || [])
+    // If from Discogs but no image, try fallback
+    if (isFromDiscogs && !coverImage) {
+      coverImage = await coverArtService.getCoverArt(artistName, release.title) || undefined
+    }
+
+    const vinylColor = isFromDiscogs ? discogsService.extractColor(release.formats || []) : null
 
     return res.json({
       title: release.title,
@@ -47,6 +61,7 @@ router.post("/barcode", authMiddleware, async (req: AuthRequest, res: Response) 
       genres: release.genres,
       vinylColor,
       discCount: release.discCount || 1,
+      format: release.format || "vinyl"
     })
   } catch (error) {
     console.error(error)
@@ -63,10 +78,18 @@ router.post("/search", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Titre requis" })
     }
 
-    const release = await discogsService.searchByTitle(title, artist)
+    let release = await discogsService.searchByTitle(title, artist)
+    let isFromDiscogs = true
+
+    // Fallback to iTunes if not found on Discogs
+    if (!release) {
+      console.log(`Album "${title}" by "${artist}" not found on Discogs, trying iTunes...`)
+      release = await coverArtService.searchAlbum(artist || "", title)
+      isFromDiscogs = false
+    }
 
     if (!release) {
-      return res.status(404).json({ error: "Vinyle non trouvé" })
+      return res.status(404).json({ error: "Album non trouvé" })
     }
 
     const artistName =
@@ -79,12 +102,17 @@ router.post("/search", async (req: Request, res: Response) => {
         ? release.genres[0]
         : "Non classifié"
 
-    const coverImage =
+    let coverImage =
       release.images && release.images.length > 0
         ? release.images[0].uri
         : undefined
 
-    const vinylColor = discogsService.extractColor(release.formats || [])
+    // If from Discogs but no image, try fallback
+    if (isFromDiscogs && !coverImage) {
+      coverImage = await coverArtService.getCoverArt(artistName, release.title) || undefined
+    }
+
+    const vinylColor = isFromDiscogs ? discogsService.extractColor(release.formats || []) : null
 
     return res.json({
       title: release.title,
@@ -95,6 +123,7 @@ router.post("/search", async (req: Request, res: Response) => {
       coverImage,
       genres: release.genres,
       vinylColor,
+      format: release.format || "vinyl"
     })
   } catch (error) {
     console.error(error)

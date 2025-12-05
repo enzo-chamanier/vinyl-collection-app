@@ -21,6 +21,7 @@ interface Vinyl {
   gifted_to_username?: string
   owner_username?: string
   user_id?: string
+  format?: "vinyl" | "cd"
 }
 
 interface VinylCollectionProps {
@@ -32,6 +33,7 @@ interface VinylCollectionProps {
 
 export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre collection" }: VinylCollectionProps) {
   const [selectedArtist, setSelectedArtist] = useState<string>("")
+  const [selectedFormat, setSelectedFormat] = useState<"all" | "vinyl" | "cd">("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [groupByArtist, setGroupByArtist] = useState(false)
   const [isSelectionMode, setIsSelectionMode] = useState(false)
@@ -60,7 +62,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
   }
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Voulez-vous vraiment supprimer ${selectedIds.size} vinyles ?`)) return
+    if (!confirm(`Voulez-vous vraiment supprimer ${selectedIds.size} albums ?`)) return
 
     setDeleting(true)
     try {
@@ -73,7 +75,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
       onUpdate()
     } catch (error) {
       console.error("Error deleting vinyls:", error)
-      alert("Erreur lors de la suppression des vinyles")
+      alert("Erreur lors de la suppression des albums")
     } finally {
       setDeleting(false)
     }
@@ -91,6 +93,10 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
       result = result.filter((v) => v.artist.replace(/\s*\([^)]*\)/g, "") === selectedArtist)
     }
 
+    if (selectedFormat !== "all") {
+      result = result.filter((v) => (v.format || "vinyl") === selectedFormat)
+    }
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       result = result.filter((v) =>
@@ -101,7 +107,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
     }
 
     return result
-  }, [vinyls, selectedArtist, searchQuery])
+  }, [vinyls, selectedArtist, selectedFormat, searchQuery])
 
   useEffect(() => {
     if (headerRef.current) {
@@ -134,7 +140,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
     return (
       <div className="text-center py-12">
         <h3 className="text-lg font-semibold mb-2">Votre collection est vide</h3>
-        <p className="text-text-secondary">Commencez à ajouter des vinyles pour construire votre collection</p>
+        <p className="text-muted-foreground">Commencez à ajouter des albums pour construire votre collection</p>
       </div>
     )
   }
@@ -145,7 +151,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
         <div className="flex items-center gap-4">
           <h2 className="text-2xl text-primary font-bold">{title} ({filteredVinyls.length})</h2>
           {isSelectionMode && (
-            <span className="text-sm text-text-secondary">{selectedIds.size} sélectionné(s)</span>
+            <span className="text-sm text-muted-foreground">{selectedIds.size} sélectionné(s)</span>
           )}
         </div>
 
@@ -164,7 +170,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
                   setIsSelectionMode(false)
                   setSelectedIds(new Set())
                 }}
-                className="bg-surface border border-border text-white px-4 py-2 rounded text-sm font-medium hover:bg-white/10 transition"
+                className="bg-card border border-border text-foreground px-4 py-2 rounded text-sm font-medium hover:bg-muted/50 transition"
               >
                 Annuler
               </button>
@@ -173,7 +179,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
             <>
               <button
                 onClick={() => setIsSelectionMode(true)}
-                className="bg-surface border border-border text-text-secondary px-4 py-2 rounded text-sm font-medium hover:text-white hover:border-primary transition"
+                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 !text-neutral-600 dark:!text-neutral-400 px-4 py-2 rounded text-sm font-medium hover:!text-black dark:hover:!text-white hover:border-primary transition"
               >
                 Sélectionner
               </button>
@@ -182,13 +188,13 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
                 placeholder="Rechercher..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-surface border border-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary w-full sm:w-48"
+                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 text-sm !text-black dark:!text-white placeholder:text-neutral-500 dark:placeholder:text-neutral-400 focus:outline-none focus:border-primary w-full sm:w-48"
               />
 
               <select
                 value={selectedArtist}
                 onChange={(e) => setSelectedArtist(e.target.value)}
-                className="bg-surface border border-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 text-sm !text-black dark:!text-white focus:outline-none focus:border-primary"
               >
                 <option value="">Tous les artistes</option>
                 {artists.map((artist) => (
@@ -198,11 +204,21 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
                 ))}
               </select>
 
+              <select
+                value={selectedFormat}
+                onChange={(e) => setSelectedFormat(e.target.value as "all" | "vinyl" | "cd")}
+                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 text-sm !text-black dark:!text-white focus:outline-none focus:border-primary"
+              >
+                <option value="all">Tous les formats</option>
+                <option value="vinyl">Vinyles</option>
+                <option value="cd">CDs</option>
+              </select>
+
               <button
                 onClick={() => setGroupByArtist(!groupByArtist)}
                 className={`px-4 py-2 rounded text-sm font-medium transition border ${groupByArtist
-                  ? "bg-primary text-white border-primary"
-                  : "bg-surface text-text-secondary border-border hover:border-primary"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "!bg-white dark:!bg-neutral-900 !text-neutral-600 dark:!text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-primary"
                   }`}
               >
                 {groupByArtist ? "Par Artiste" : "Grille"}
@@ -214,21 +230,20 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
 
       <div className="min-h-screen">
         {filteredVinyls.length === 0 ? (
-          <div className="text-center py-12 text-text-secondary">
-            Aucun vinyle trouvé.
+          <div className="text-center py-12 text-muted-foreground">
+            Aucun album trouvé.
           </div>
         ) : groupByArtist ? (
           <div className="space-y-8">
             {Object.entries(vinylsByArtist).map(([artist, vinyls]: [string, any]) => (
-              <div key={artist} className="bg-black rounded-xl p-6 border border-border/50">
-                <h3 className="text-xl font-bold text-white mb-4 border-b border-border pb-2">{artist}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-white">
+              <div key={artist} className="bg-card rounded-xl p-6 border border-border/50">
+                <h3 className="text-xl font-bold text-foreground mb-4 border-b border-border pb-2">{artist}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-foreground">
                   {vinyls.map((vinyl: any) => (
                     <VinylCard
                       key={vinyl.id}
                       vinyl={vinyl}
                       onUpdate={onUpdate}
-                      variant="dark"
                       selectable={isSelectionMode}
                       selected={selectedIds.has(vinyl.id)}
                       onSelect={() => toggleSelection(vinyl.id)}

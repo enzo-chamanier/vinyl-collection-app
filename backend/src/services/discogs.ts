@@ -24,6 +24,7 @@ interface DiscogsRelease {
   uri: string
   formats?: DiscogsFormat[]
   discCount?: number
+  format?: "vinyl" | "cd"
 }
 
 export class DiscogsService {
@@ -95,7 +96,8 @@ export class DiscogsService {
         images: data.images || [],
         uri: data.uri,
         formats: formats,
-        discCount: this.extractDiscCount(formats) // Calculate discCount
+        discCount: this.extractDiscCount(formats),
+        format: this.extractFormat(formats)
       }
     } catch (error) {
       console.error("Erreur lors de la récupération des détails Discogs:", error)
@@ -164,6 +166,21 @@ export class DiscogsService {
       }
     }
     return maxQty;
+  }
+
+  extractFormat(formats: DiscogsFormat[]): "vinyl" | "cd" {
+    for (const format of formats) {
+      const name = format.name.toLowerCase();
+      const descriptions = (format.descriptions || []).map(d => d.toLowerCase());
+
+      if (name === "cd" || descriptions.includes("cd")) {
+        return "cd";
+      }
+      if (name === "vinyl" || descriptions.includes("lp") || descriptions.includes("12\"") || descriptions.includes("7\"")) {
+        return "vinyl";
+      }
+    }
+    return "vinyl"; // Default
   }
 }
 

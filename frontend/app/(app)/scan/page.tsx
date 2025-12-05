@@ -29,22 +29,26 @@ export default function ScanPage() {
 
   return (
     <AppLayout>
-      {loading && <FullScreenLoader message="Ajout du vinyle en cours..." />}
+      {loading && <FullScreenLoader message="Ajout en cours..." />}
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-4">Ajouter un Vinyle</h1>
+          <h1 className="text-3xl font-bold mb-4">Ajouter un Album</h1>
 
           <div className="flex gap-4 mb-6">
             <button
               onClick={() => setMode("scan")}
-              className={`flex-1 py-3 rounded font-semibold transition ${mode === "scan" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-text-primary"
+              className={`flex-1 py-3 rounded font-semibold transition ${mode === "scan"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 }`}
             >
               Scan du Code-barres
             </button>
             <button
               onClick={() => setMode("manual")}
-              className={`flex-1 py-3 rounded font-semibold transition ${mode === "manual" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-text-primary"
+              className={`flex-1 py-3 rounded font-semibold transition ${mode === "manual"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 }`}
             >
               Saisie Manuelle

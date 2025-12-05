@@ -44,15 +44,16 @@ router.post("/add", authMiddleware, async (req: AuthRequest, res: Response) => {
       vinylColor,
       discCount,
       giftedByUserId,
-      sharedWithUserId
+      sharedWithUserId,
+      format
     } = req.body;
 
     const vinylId = uuidv4();
     const newVinyl = await query(
       `INSERT INTO vinyls 
-      (id, user_id, title, artist, genre, release_year, barcode, discogs_id, cover_image, notes, rating, vinyl_color, disc_count, gifted_by_user_id, shared_with_user_id, date_added, updated_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW(),NOW()) RETURNING *`,
-      [vinylId, req.user?.userId, title, artist, genre, releaseYear, barcode, discogsId, coverImage, notes, rating, vinylColor, discCount || 1, giftedByUserId || null, sharedWithUserId || null]
+      (id, user_id, title, artist, genre, release_year, barcode, discogs_id, cover_image, notes, rating, vinyl_color, disc_count, gifted_by_user_id, shared_with_user_id, format, date_added, updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),NOW()) RETURNING *`,
+      [vinylId, req.user?.userId, title, artist, genre, releaseYear, barcode, discogsId, coverImage, notes, rating, vinylColor, discCount || 1, giftedByUserId || null, sharedWithUserId || null, format || "vinyl"]
     );
 
     return res.status(201).json(newVinyl.rows[0]);
@@ -82,7 +83,8 @@ router.put("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
       vinylColor,
       discCount,
       giftedByUserId,
-      sharedWithUserId
+      sharedWithUserId,
+      format
     } = req.body;
 
     const updatedVinyl = await query(
@@ -98,10 +100,11 @@ router.put("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
         disc_count = $9,
         gifted_by_user_id = $10,
         shared_with_user_id = $11,
+        format = $12,
         updated_at = NOW()
-      WHERE id = $12 AND user_id = $13
+      WHERE id = $13 AND user_id = $14
       RETURNING *`,
-      [title, artist, genre, releaseYear, coverImage, notes, rating, vinylColor, discCount || 1, giftedByUserId || null, sharedWithUserId || null, id, req.user?.userId]
+      [title, artist, genre, releaseYear, coverImage, notes, rating, vinylColor, discCount || 1, giftedByUserId || null, sharedWithUserId || null, format || "vinyl", id, req.user?.userId]
     );
 
     if (updatedVinyl.rows.length === 0) {

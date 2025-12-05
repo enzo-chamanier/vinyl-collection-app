@@ -145,7 +145,7 @@ export function BarcodeScanner({ onVinylFound }: BarcodeScannerProps) {
       const vinyl = await api.post("/scan/barcode", { barcode })
       await onVinylFound(vinyl)
     } catch (err: any) {
-      setError(err.message || "Vinyl not found")
+      setError(err.message || "Album non trouvé")
       setLastScanned(null)
     } finally {
       setLoading(false)
@@ -160,7 +160,7 @@ export function BarcodeScanner({ onVinylFound }: BarcodeScannerProps) {
   }
 
   if (loading) {
-    return <FullScreenLoader message="Recherche du vinyle..." />
+    return <FullScreenLoader message="Recherche..." />
   }
 
   return (
@@ -168,7 +168,7 @@ export function BarcodeScanner({ onVinylFound }: BarcodeScannerProps) {
       {!scanning ? (
         <button
           onClick={startScanner}
-          className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-4 rounded transition"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-4 rounded transition"
         >
           Démarrer la Caméra
         </button>
@@ -185,27 +185,27 @@ export function BarcodeScanner({ onVinylFound }: BarcodeScannerProps) {
         </div>
       )}
 
-      <div className="my-4 text-center text-text-secondary">ou</div>
+      <div className="my-4 text-center text-muted-foreground">ou</div>
 
       <form onSubmit={handleManualBarcode} className="space-y-3">
         <input
           type="text"
           name="barcode"
           placeholder="Entrez le code-barres manuellement"
-          className="w-full text-text-secondary bg-black border-border rounded h-10 px-3"
+          className="w-full bg-background border border-input rounded h-10 px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           required
         />
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gray-200 hover:bg-gray-300/90 text-black font-semibold py-3 rounded transition disabled:opacity-50"
+          className="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground font-semibold py-3 rounded transition disabled:opacity-50"
         >
           {loading ? "Recherche en cours..." : "Rechercher"}
         </button>
       </form>
 
       {error && (
-        <div className="bg-red-500/10 border border-primary text-primary px-4 py-2 rounded text-sm">{error}</div>
+        <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-2 rounded text-sm">{error}</div>
       )}
     </div>
   )
