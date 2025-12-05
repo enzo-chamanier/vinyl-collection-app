@@ -6,6 +6,7 @@ import { api } from "@/lib/api"
 import { ArrowLeft, Lock } from "lucide-react"
 import { AppLayout } from "@/components/layout/app-layout"
 import { VinylCard } from "@/components/vinyl/vinyl-card"
+import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 
 interface Vinyl {
     id: string
@@ -111,11 +112,7 @@ function ProfileContent() {
     }, [username])
 
     if (loading) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <div className="text-text-secondary animate-pulse">Chargement du profil...</div>
-            </div>
-        )
+        return <FullScreenLoader message="Chargement du profil..." />
     }
 
     if (error || !profile) {
@@ -310,7 +307,7 @@ function ProfileContent() {
 export default function UserProfilePage() {
     return (
         <AppLayout>
-            <Suspense fallback={<div className="text-center p-8">Chargement...</div>}>
+            <Suspense fallback={<FullScreenLoader message="Chargement..." />}>
                 <ProfileContent />
             </Suspense>
         </AppLayout>

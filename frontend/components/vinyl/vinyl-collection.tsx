@@ -13,6 +13,14 @@ interface Vinyl {
   cover_image?: string
   rating?: number
   vinyl_color?: string
+  disc_count?: number
+  gifted_by_username?: string
+  shared_with_username?: string
+  gifted_by_user_id?: string
+  shared_with_user_id?: string
+  gifted_to_username?: string
+  owner_username?: string
+  user_id?: string
 }
 
 interface VinylCollectionProps {

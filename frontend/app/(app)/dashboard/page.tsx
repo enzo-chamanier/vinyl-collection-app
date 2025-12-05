@@ -6,6 +6,7 @@ import { AppLayout } from "@/components/layout/app-layout"
 import { VinylCollection } from "@/components/vinyl/vinyl-collection"
 import { CollectionStats } from "@/components/stats/collection-stats"
 import { api } from "@/lib/api"
+import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 
 
 interface CollectionStatsType {
@@ -70,6 +71,10 @@ export default function DashboardPage() {
       totalArtists: Object.keys(artistCount).length
     })
 
+  }
+
+  if (loading) {
+    return <FullScreenLoader message="Chargement de votre collection..." />
   }
 
   return (

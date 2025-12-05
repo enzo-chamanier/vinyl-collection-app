@@ -1,5 +1,5 @@
 "use client"
-import Link from "next/link"
+
 import { ProfilePreviewCard } from "./profile-preview-card"
 interface FriendsListProps {
   following: any[]

@@ -3,22 +3,21 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/hooks/use-auth"
+import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 
 export default function RootPage() {
     const router = useRouter()
-    const { user, loading } = useAuth()
+    const { user, loading } = useAuth(false)
 
     useEffect(() => {
         if (!loading && user) {
             router.push("/dashboard")
         } else if (!loading && !user) {
             router.push("/login")
-        } 
+        }
     }, [user, loading, router])
 
     return (
-        <div className="flex h-screen w-full items-center justify-center bg-black">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent" />
-        </div>
+        <FullScreenLoader message="Chargement de Discory..." />
     )
 }

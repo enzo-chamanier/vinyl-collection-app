@@ -1,7 +1,7 @@
 {
-  "name": "vinylstack-frontend",
+  "name": "discory-frontend",
   "version": "1.0.0",
-  "description": "VinylStack - Vinyl collection manager PWA",
+  "description": "Discory - Vinyl collection manager PWA",
   "scripts": {
     "dev": "next dev",
     "build": "next build ",

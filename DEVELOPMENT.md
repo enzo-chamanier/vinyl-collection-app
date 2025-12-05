@@ -1,4 +1,4 @@
-# VinylStack Development Guide
+# Discory Development Guide
 
 ## Project Structure
 

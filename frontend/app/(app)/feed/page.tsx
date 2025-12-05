@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { AppLayout } from "@/components/layout/app-layout"
 import { VinylFeed } from "@/components/feed/vinyl-feed"
 import { api } from "@/lib/api"
+import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 
 export default function FeedPage() {
   const [feed, setFeed] = useState([])
@@ -22,6 +23,10 @@ export default function FeedPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loading) {
+    return <FullScreenLoader message="Chargement du fil d'actualité..." />
   }
 
   return (

@@ -8,13 +8,13 @@ import "./globals.css"
 const geistSans = Geist({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "VinylStack - Ta collection de vinyles, organisée",
-  description: "Organise et gère ta collection de vinyles avec VinylStack.",
+  title: "Discory - Ta collection de vinyles & cd, organisée",
+  description: "Organise et gère ta collection de vinyles & cd avec Discory.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "VinylStack",
+    title: "Discory",
   },
 }
 

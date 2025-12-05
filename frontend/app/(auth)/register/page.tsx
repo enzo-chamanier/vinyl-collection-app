@@ -1,14 +1,15 @@
-  "use client"
+"use client"
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { AuthForm } from "@/components/auth/auth-form"
 import { useAuth } from "@/lib/hooks/use-auth"
+import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { user, loading } = useAuth()
+  const { user, loading } = useAuth(false)
 
   useEffect(() => {
     if (!loading && user) {
@@ -18,9 +19,7 @@ export default function RegisterPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent" />
-      </div>
+      <FullScreenLoader />
     )
   }
 
@@ -28,7 +27,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-2">VinylStack</h1>
+          <h1 className="text-4xl font-bold text-primary mb-2">Discory</h1>
           <p className="text-text-secondary">Rejoignez nous et commencez à organiser votre collection de vinyles</p>
         </div>
 

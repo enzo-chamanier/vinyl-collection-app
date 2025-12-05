@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { X, Check, Gift, Users } from "lucide-react"
 import { api } from "@/lib/api"
 

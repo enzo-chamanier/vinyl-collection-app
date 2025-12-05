@@ -29,7 +29,7 @@ interface DiscogsRelease {
 export class DiscogsService {
   private apiUrl = "https://api.discogs.com"
   private headers = {
-    "User-Agent": "VinylStack/1.0 (+http://vinylstack.app)",
+    "User-Agent": "Discory/1.0 (+http://discory.app)",
     "Authorization": `Discogs token=${process.env.DISCOGS_API_KEY}`
   }
 

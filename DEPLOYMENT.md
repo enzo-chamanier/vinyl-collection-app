@@ -1,4 +1,4 @@
-# VinylStack Deployment Guide
+# Discory Deployment Guide
 
 ## Prerequisites
 
@@ -94,7 +94,7 @@ Regularly backup SQLite database to a cloud service.
 PORT=5000
 NODE_ENV=production
 JWT_SECRET=<very-long-random-secret>
-DATABASE_URL=file:./data/vinylstack.db
+DATABASE_URL=file:./data/discory.db
 FRONTEND_URL=https://your-frontend-url.com
 DISCOGS_API_KEY=<your-discogs-key>
 \`\`\`

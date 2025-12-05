@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { AuthForm } from "@/components/auth/auth-form"
 import { useAuth } from "@/lib/hooks/use-auth"
+import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 
 export default function LoginPage() {
   const router = useRouter()
-  const { user, loading } = useAuth()
+  const { user, loading } = useAuth(false)
 
   useEffect(() => {
     if (!loading && user) {
@@ -17,9 +18,7 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent" />
-      </div>
+      <FullScreenLoader />
     )
   }
 
@@ -27,9 +26,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="VinylStack Logo" className="w-16 h-16 mx-auto mb-4" />
-          <h1 className="text-4xl font-bold text-primary mb-2">VinylStack</h1>
-          <p className="text-text-secondary">Ta collection de vinyles, organisée</p>
+          <img src="/logo.png" alt="Discory Logo" className="w-16 h-16 mx-auto mb-4" />
+          <h1 className="text-4xl font-bold text-primary mb-2">Discory</h1>
+          <p className="text-text-secondary">Ta collection de vinyles & cd, organisée</p>
         </div>
 
         <AuthForm type="login" />

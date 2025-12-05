@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { User, Lock, Globe } from "lucide-react"
+import {  Lock, Globe } from "lucide-react"
 
 interface ProfilePreviewCardProps {
     profile: {

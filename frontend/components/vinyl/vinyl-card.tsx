@@ -44,7 +44,6 @@ export function VinylCard({
   selected = false,
   onSelect,
   readOnly = false,
-  currentUserId,
   currentUsername
 }: VinylCardProps) {
   const [showDelete, setShowDelete] = useState(false)

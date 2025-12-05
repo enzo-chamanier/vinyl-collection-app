@@ -5,12 +5,14 @@ import { AppLayout } from "@/components/layout/app-layout"
 import { SearchUsers } from "@/components/friends/search-users"
 import { FriendsList } from "@/components/friends/friends-list"
 import { api } from "@/lib/api"
+import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 
 export default function FriendsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
   const [following, setFollowing] = useState([])
   const [searching, setSearching] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -30,6 +32,8 @@ export default function FriendsPage() {
         }
       } catch (error) {
         console.error("Error fetching following:", error)
+      } finally {
+        setLoading(false)
       }
     }
     fetchFollowing()
@@ -45,6 +49,10 @@ export default function FriendsPage() {
     } finally {
       setSearching(false)
     }
+  }
+
+  if (loading) {
+    return <FullScreenLoader message="Chargement de vos amis..." />
   }
 
   return (

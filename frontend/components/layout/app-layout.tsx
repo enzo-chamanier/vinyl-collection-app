@@ -37,9 +37,9 @@ export function AppLayout({ children }: AppLayoutProps) {
       <header className="bg-surface border-b border-border md:sticky md:top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="VinylStack Logo" className="w-8 h-8" />
+            <img src="/logo.png" alt="Discory Logo" className="w-8 h-8" />
             <Link href="/dashboard" className="text-xl font-bold text-white">
-              VinylStack
+              Discory
             </Link>
           </div>
 
@@ -75,7 +75,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Footer */}
       <footer className="bg-surface border-t border-border mt-12 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 py-6 text-center text-text-secondary text-sm">
-          © 2025 VinylStack. Construisez votre collection, partagez votre passion.
+          © 2025 Discory. Construisez votre collection, partagez votre passion.
         </div>
       </footer>
     </div>

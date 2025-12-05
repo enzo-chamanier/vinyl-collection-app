@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { AppLayout } from "@/components/layout/app-layout"
 import { CollectionAnalytics } from "@/components/analytics/collection-analytics"
 import { api } from "@/lib/api"
+import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 
 export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState(null)
@@ -22,6 +23,10 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loading) {
+    return <FullScreenLoader message="Chargement des statistiques..." />
   }
 
   return (

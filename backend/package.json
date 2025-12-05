@@ -1,7 +1,7 @@
 {
-  "name": "vinylstack-backend",
+  "name": "discory-backend",
   "version": "1.0.0",
-  "description": "Backend API for VinylStack - Vinyl collection manager PWA",
+  "description": "Backend API for Discory - Vinyl collection manager PWA",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node src/index.ts",

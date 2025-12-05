@@ -6,6 +6,7 @@ import { AppLayout } from "@/components/layout/app-layout"
 import { BarcodeScanner } from "@/components/scan/barcode-scanner"
 import { ManualVinylForm } from "@/components/scan/manual-vinyl-form"
 import { api } from "@/lib/api"
+import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 
 export default function ScanPage() {
   const router = useRouter()
@@ -28,6 +29,7 @@ export default function ScanPage() {
 
   return (
     <AppLayout>
+      {loading && <FullScreenLoader message="Ajout du vinyle en cours..." />}
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-4">Ajouter un Vinyle</h1>
@@ -35,17 +37,15 @@ export default function ScanPage() {
           <div className="flex gap-4 mb-6">
             <button
               onClick={() => setMode("scan")}
-              className={`flex-1 py-3 rounded font-semibold transition ${
-                mode === "scan" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-text-primary"
-              }`}
+              className={`flex-1 py-3 rounded font-semibold transition ${mode === "scan" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-text-primary"
+                }`}
             >
               Scan du Code-barres
             </button>
             <button
               onClick={() => setMode("manual")}
-              className={`flex-1 py-3 rounded font-semibold transition ${
-                mode === "manual" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-text-primary"
-              }`}
+              className={`flex-1 py-3 rounded font-semibold transition ${mode === "manual" ? "bg-primary text-white" : "bg-surface text-text-secondary hover:text-text-primary"
+                }`}
             >
               Saisie Manuelle
             </button>

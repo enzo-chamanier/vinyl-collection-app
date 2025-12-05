@@ -1,4 +1,4 @@
-# VinylStack - Vinyl Collection Manager PWA
+# Discory - Vinyl Collection Manager PWA
 
 A modern, full-stack Progressive Web App for scanning, organizing, and sharing your vinyl record collection with friends.
 
@@ -157,7 +157,7 @@ vercel deploy
 
 ## Mobile Support
 
-VinylStack is fully responsive and PWA-enabled. You can install it on your phone:
+Discory is fully responsive and PWA-enabled. You can install it on your phone:
 
 1. Open the app in your mobile browser
 2. Click "Add to Home Screen" (iOS) or "Install App" (Android)

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
-export function useAuth() {
+export function useAuth(requireAuth = true) {
   const router = useRouter()
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -14,7 +14,9 @@ export function useAuth() {
       const userData = localStorage.getItem("user")
 
       if (!token || !userData) {
-        router.push("/login")
+        if (requireAuth) {
+          router.push("/login")
+        }
         return
       }
 
@@ -30,7 +32,7 @@ export function useAuth() {
 
     checkAuth()
     setLoading(false)
-  }, [router])
+  }, [router, requireAuth])
 
   const logout = () => {
     localStorage.removeItem("token")
