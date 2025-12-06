@@ -11,8 +11,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.6 0.2 20);
-  /* Red-ish */
+  --primary: oklch(0.145 0 0);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -24,8 +23,8 @@
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.6 0.2 20);
-  --radius: 0.625rem;
+  --ring: oklch(0.145 0 0);
+  --radius: 1rem;
 
   /* Custom aliases */
   --surface: oklch(1 0 0);
@@ -41,8 +40,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.15 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.6 0.2 20);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.2 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.2 0 0);
@@ -53,7 +52,7 @@
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.2 0 0);
   --input: oklch(0.2 0 0);
-  --ring: oklch(0.6 0.2 20);
+  --ring: oklch(0.985 0 0);
 
   /* Custom aliases */
   --surface: oklch(0.15 0 0);
@@ -118,7 +117,7 @@ input[type="password"],
 input[type="number"],
 textarea,
 select {
-  @apply appearance-none bg-surface border border-border rounded px-3 py-2 text-foreground;
+  @apply appearance-none bg-surface border border-border rounded-lg px-3 py-2 text-foreground;
 }
 
 input:focus,

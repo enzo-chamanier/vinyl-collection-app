@@ -168,7 +168,7 @@ export function BarcodeScanner({ onVinylFound }: BarcodeScannerProps) {
       {!scanning ? (
         <button
           onClick={startScanner}
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-4 rounded transition"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-4 rounded-lg transition"
         >
           Démarrer la Caméra
         </button>
@@ -177,7 +177,7 @@ export function BarcodeScanner({ onVinylFound }: BarcodeScannerProps) {
           <div id="reader" className="w-full rounded-lg overflow-hidden bg-black min-h-[300px]"></div>
           <button
             onClick={stopScanner}
-            className="absolute top-2 right-2 bg-black/50 text-white px-3 py-1 rounded z-10"
+            className="absolute top-2 right-2 bg-black/50 text-white px-3 py-1 rounded-lg z-10"
           >
             Fermer
           </button>
@@ -192,20 +192,20 @@ export function BarcodeScanner({ onVinylFound }: BarcodeScannerProps) {
           type="text"
           name="barcode"
           placeholder="Entrez le code-barres manuellement"
-          className="w-full bg-background border border-input rounded h-10 px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full bg-background border border-input rounded-lg h-10 px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           required
         />
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground font-semibold py-3 rounded transition disabled:opacity-50"
+          className="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground font-semibold py-3 rounded-lg transition disabled:opacity-50"
         >
           {loading ? "Recherche en cours..." : "Rechercher"}
         </button>
       </form>
 
       {error && (
-        <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-2 rounded text-sm">{error}</div>
+        <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-2 rounded-lg text-sm">{error}</div>
       )}
     </div>
   )

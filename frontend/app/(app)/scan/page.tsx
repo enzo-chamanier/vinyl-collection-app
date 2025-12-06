@@ -37,18 +37,18 @@ export default function ScanPage() {
           <div className="flex gap-4 mb-6">
             <button
               onClick={() => setMode("scan")}
-              className={`flex-1 py-3 rounded font-semibold transition ${mode === "scan"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              className={`flex-1 py-3 rounded-lg font-semibold transition ${mode === "scan"
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 }`}
             >
               Scan du Code-barres
             </button>
             <button
               onClick={() => setMode("manual")}
-              className={`flex-1 py-3 rounded font-semibold transition ${mode === "manual"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              className={`flex-1 py-3 rounded-lg font-semibold transition ${mode === "manual"
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 }`}
             >
               Saisie Manuelle
@@ -57,7 +57,7 @@ export default function ScanPage() {
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-primary text-primary px-4 py-3 rounded mb-4">{error}</div>
+          <div className="bg-red-500/10 border border-primary text-primary px-4 py-3 rounded-lg mb-4">{error}</div>
         )}
 
         {mode === "scan" ? (

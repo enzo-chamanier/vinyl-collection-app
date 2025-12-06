@@ -26,7 +26,7 @@ export function BackendAwakener({ children }: { children: React.ReactNode }) {
     }, [])
 
     if (!isAwake) {
-        return <FullScreenLoader message="Démarrage du serveur..." />
+        return <FullScreenLoader message="Démarrage de Discory..." />
     }
 
     return <>{children}</>

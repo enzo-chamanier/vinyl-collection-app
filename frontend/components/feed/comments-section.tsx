@@ -135,7 +135,7 @@ export function CommentsSection({ vinylId, currentUserId, vinylOwnerId, onCommen
                             <div className="flex items-center gap-2">
                                 <span className={`font-semibold text-sm ${isOwner ? "text-primary" : "text-foreground"}`}>{comment.username}</span>
                                 {isOwner && (
-                                    <span className="text-[10px] bg-primary text-white px-1.5 py-0.5 rounded-full font-medium">
+                                    <span className="text-[10px] bg-primary dark:bg-primary-foreground dark:text-white px-1.5 py-0.5 rounded-full font-medium">
                                         Auteur
                                     </span>
                                 )}

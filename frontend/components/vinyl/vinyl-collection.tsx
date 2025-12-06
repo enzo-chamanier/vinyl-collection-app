@@ -161,7 +161,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
               <button
                 onClick={handleBulkDelete}
                 disabled={selectedIds.size === 0 || deleting}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deleting ? "Suppression..." : `Supprimer (${selectedIds.size})`}
               </button>
@@ -170,7 +170,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
                   setIsSelectionMode(false)
                   setSelectedIds(new Set())
                 }}
-                className="bg-card border border-border text-foreground px-4 py-2 rounded text-sm font-medium hover:bg-muted/50 transition"
+                className="bg-card border border-border text-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted/50 transition"
               >
                 Annuler
               </button>
@@ -179,7 +179,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
             <>
               <button
                 onClick={() => setIsSelectionMode(true)}
-                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 !text-neutral-600 dark:!text-neutral-400 px-4 py-2 rounded text-sm font-medium hover:!text-black dark:hover:!text-white hover:border-primary transition"
+                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 !text-neutral-600 dark:!text-neutral-400 px-4 py-2 rounded-lg text-sm font-medium hover:!text-black dark:hover:!text-white hover:border-primary transition"
               >
                 Sélectionner
               </button>
@@ -188,13 +188,13 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
                 placeholder="Rechercher..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 text-sm !text-black dark:!text-white placeholder:text-neutral-500 dark:placeholder:text-neutral-400 focus:outline-none focus:border-primary w-full sm:w-48"
+                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm !text-black dark:!text-white placeholder:text-neutral-500 dark:placeholder:text-neutral-400 focus:outline-none focus:border-primary w-full sm:w-48"
               />
 
               <select
                 value={selectedArtist}
                 onChange={(e) => setSelectedArtist(e.target.value)}
-                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 text-sm !text-black dark:!text-white focus:outline-none focus:border-primary"
+                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm !text-black dark:!text-white focus:outline-none focus:border-primary"
               >
                 <option value="">Tous les artistes</option>
                 {artists.map((artist) => (
@@ -207,7 +207,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
               <select
                 value={selectedFormat}
                 onChange={(e) => setSelectedFormat(e.target.value as "all" | "vinyl" | "cd")}
-                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 text-sm !text-black dark:!text-white focus:outline-none focus:border-primary"
+                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm !text-black dark:!text-white focus:outline-none focus:border-primary"
               >
                 <option value="all">Tous les formats</option>
                 <option value="vinyl">Vinyles</option>
@@ -216,7 +216,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
 
               <button
                 onClick={() => setGroupByArtist(!groupByArtist)}
-                className={`px-4 py-2 rounded text-sm font-medium transition border ${groupByArtist
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition border ${groupByArtist
                   ? "bg-primary text-primary-foreground border-primary"
                   : "!bg-white dark:!bg-neutral-900 !text-neutral-600 dark:!text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-primary"
                   }`}
