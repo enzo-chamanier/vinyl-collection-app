@@ -34,10 +34,16 @@ export default function ProfilePage() {
 
   const loadProfile = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}")
-      const profileData = await api.get(`/users/${user.username}`)
+      // Use the new /profile/me endpoint which uses the token's user ID
+      // This avoids issues with stale username in localStorage
+      const profileData = await api.get(`/users/profile/me`)
 
-      // Fetch stats
+      // Fetch stats (followers count is not in the main profile object yet?)
+      // Actually, let's check if the backend returns it.
+      // The backend returns { user, vinyls, giftedVinyls, stats }
+      // But followersCount/followingCount are fetched separately in the original code.
+      // Let's keep fetching them using the ID from the profileData.user
+
       if (profileData && profileData.user) {
         try {
           const countRes = await api.get(`/followers/count/${profileData.user.id}`)
@@ -46,11 +52,20 @@ export default function ProfilePage() {
         } catch (e) {
           console.warn("Could not fetch stats", e)
         }
+
+        // Also update localStorage with the fresh user data to keep it in sync
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}")
+        if (storedUser.username !== profileData.user.username) {
+          storedUser.username = profileData.user.username
+          localStorage.setItem("user", JSON.stringify(storedUser))
+        }
       }
 
       setProfile(profileData)
     } catch (error) {
       console.error("Error loading profile:", error)
+      // If 401, maybe redirect to login?
+      // For now just log it.
     } finally {
       setLoading(false)
     }

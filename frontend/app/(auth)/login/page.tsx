@@ -23,10 +23,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="Discory Logo" className="w-16 h-16 mx-auto mb-4" />
+          <img src="/logo.png" alt="Discory Logo" className="w-16 h-16 mx-auto mb-4 dark:invert" />
           <h1 className="text-4xl font-bold text-primary mb-2">Discory</h1>
           <p className="text-text-secondary">Ta collection de vinyles & cd, organisée</p>
         </div>

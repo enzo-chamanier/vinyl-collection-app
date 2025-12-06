@@ -55,7 +55,7 @@ export function AuthForm({ type }: AuthFormProps) {
         value={formData.email}
         onChange={handleChange}
         required
-        className="w-full"
+        className="w-full bg-surface border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
       />
 
       {type === "register" && (
@@ -66,7 +66,7 @@ export function AuthForm({ type }: AuthFormProps) {
           value={formData.username}
           onChange={handleChange}
           required
-          className="w-full"
+          className="w-full bg-surface border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
         />
       )}
 
@@ -77,7 +77,7 @@ export function AuthForm({ type }: AuthFormProps) {
         value={formData.password}
         onChange={handleChange}
         required
-        className="w-full"
+        className="w-full bg-surface border border-border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
       />
 
       {error && (
@@ -87,7 +87,7 @@ export function AuthForm({ type }: AuthFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 rounded transition disabled:opacity-50"
+        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5"
       >
         {loading ? "Loading..." : type === "login" ? "Connectez-vous" : "Créez un compte"}
       </button>

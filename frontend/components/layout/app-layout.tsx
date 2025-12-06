@@ -5,6 +5,7 @@ import type React from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { MobileNav } from "./mobile-nav"
+import { NotificationBell } from "@/components/notifications/notification-bell"
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -37,7 +38,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <header className="bg-neutral-950 border-b border-neutral-800 md:sticky md:top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Discory Logo" className="w-8 h-8" />
+            <img src="/logo.png" alt="Discory Logo" className="w-8 h-8 invert" />
             <Link href="/dashboard" className="text-xl font-bold text-white">
               Discory
             </Link>
@@ -58,6 +59,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* Desktop Menu */}
           <nav className="hidden md:flex items-center gap-6">
+            <NotificationBell />
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -70,7 +72,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             ))}
             <button
               onClick={handleLogout}
-              className="bg-white hover:bg-gray-200 text-black font-semibold px-4 py-2 rounded transition"
+              className="bg-white hover:bg-gray-200 text-black font-semibold px-4 py-2 rounded-lg transition"
             >
               Déconnexion
             </button>

@@ -12,7 +12,6 @@ const geistSans = Geist({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Discory - Ta collection de vinyles & cd, organisée",
   description: "Organise et gère ta collection de vinyles & cd avec Discory.",
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -36,8 +35,11 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/logo.png" />
+        <link rel="icon" href="/logo.png" media="(prefers-color-scheme: light)" />
+        <link rel="icon" href="/logo-white.png" media="(prefers-color-scheme: dark)" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" media="(prefers-color-scheme: light)" />
+        <link rel="manifest" href="/manifest-dark.json" media="(prefers-color-scheme: dark)" />
       </head>
       <body className={`${geistSans.className} antialiased`}>
         <ThemeProvider

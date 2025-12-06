@@ -9,6 +9,7 @@ import followersRouter from "./routes/followers";
 import scanRouter from "./routes/scan";
 import analyticsRouter from "./routes/analytics";
 import interactionsRouter from "./routes/interactions";
+import notificationsRouter from "./routes/notifications";
 import { errorHandler } from "./middleware/errorHandler";
 import { initDatabase } from "./config/initDatabase";
 import { authMiddleware } from "./middleware/auth";
@@ -44,6 +45,7 @@ app.use("/api/followers", authMiddleware, followersRouter);
 app.use("/api/scan", authMiddleware, scanRouter);
 app.use("/api/analytics", authMiddleware, analyticsRouter);
 app.use("/api/interactions", authMiddleware, interactionsRouter);
+app.use("/api/notifications", authMiddleware, notificationsRouter);
 
 // Error handling
 app.use(errorHandler);

@@ -33,15 +33,16 @@ router.post("/register", async (req: Request, res: Response) => {
     const hashedPassword = bcrypt.hashSync(password, 10);
     const userId = uuidv4();
 
-    // Insère le nouvel utilisateur
-    await query(
-      `INSERT INTO users (id, email, username, password, is_public, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
-      [userId, email, username, hashedPassword, true]
+    // Create user
+    const newUserResult = await query<any>(
+      "INSERT INTO users (id, email, username, password, is_public, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id, email, username, is_public",
+      [userId, email, username, hashedPassword, false]
     );
 
+    const newUser = newUserResult.rows[0];
+
     const token = jwt.sign(
-      { userId, email },
+      { userId: newUser.id, email: newUser.email },
       process.env.JWT_SECRET || "secret",
       { expiresIn: "7d" }
     );

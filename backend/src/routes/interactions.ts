@@ -93,6 +93,18 @@ router.post("/comments/:vinylId", authMiddleware, async (req: AuthRequest, res: 
             [commentId]
         );
 
+        // Notify vinyl owner
+        const vinylRes = await query("SELECT user_id FROM vinyls WHERE id = $1", [vinylId]);
+        if (vinylRes.rows.length > 0) {
+            const ownerId = vinylRes.rows[0].user_id;
+            if (ownerId !== userId) {
+                await query(
+                    "INSERT INTO notifications (id, recipient_id, sender_id, type, reference_id) VALUES ($1, $2, $3, $4, $5)",
+                    [uuidv4(), ownerId, userId, "VINYL_COMMENT", vinylId]
+                );
+            }
+        }
+
         return res.status(201).json(newCommentRes.rows[0]);
     } catch (error) {
         console.error(error);
@@ -152,6 +164,19 @@ router.post("/comments/:commentId/like", authMiddleware, async (req: AuthRequest
                 "INSERT INTO comment_likes (id, user_id, comment_id) VALUES ($1, $2, $3)",
                 [likeId, userId, commentId]
             );
+
+            // Notify comment author
+            const commentRes = await query("SELECT user_id FROM comments WHERE id = $1", [commentId]);
+            if (commentRes.rows.length > 0) {
+                const authorId = commentRes.rows[0].user_id;
+                if (authorId !== userId) {
+                    await query(
+                        "INSERT INTO notifications (id, recipient_id, sender_id, type, reference_id) VALUES ($1, $2, $3, $4, $5)",
+                        [uuidv4(), authorId, userId, "COMMENT_LIKE", commentId]
+                    );
+                }
+            }
+
             return res.json({ liked: true });
         }
     } catch (error) {

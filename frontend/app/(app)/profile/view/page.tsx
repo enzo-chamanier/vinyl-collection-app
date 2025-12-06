@@ -32,6 +32,7 @@ interface Profile {
     followingCount?: number
     vinyls?: Vinyl[]
     giftedVinyls?: Vinyl[]
+    profileCategory?: string
     [key: string]: any
 }
 
@@ -101,7 +102,8 @@ function ProfileContent() {
                 followingCount,
                 // Ensure legacy fields mapping if needed
                 profile_picture: data.user.profilePicture,
-                is_private: !data.user.isPublic
+                is_private: !data.user.isPublic,
+                profileCategory: data.user.profileCategory
             }
 
             setProfile(profileData)
@@ -241,7 +243,14 @@ function ProfileContent() {
                             )}
                         </div>
                         {profile.bio && (
-                            <p className="text-neutral-400 mb-4 max-w-2xl mx-auto md:mx-0">{profile.bio}</p>
+                            <p className="text-neutral-400 mb-2 max-w-2xl mx-auto md:mx-0">{profile.bio}</p>
+                        )}
+                        {profile.profileCategory && !isPrivate && (
+                            <div className="mb-4 flex justify-center md:justify-start">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground border border-border">
+                                    {profile.profileCategory}
+                                </span>
+                            </div>
                         )}
                         <div className="flex items-center justify-center md:justify-start gap-6 text-neutral-400">
                             <div className="text-center">

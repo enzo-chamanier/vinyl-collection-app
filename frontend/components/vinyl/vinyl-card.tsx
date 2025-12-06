@@ -302,7 +302,7 @@ export function VinylCard({
 
       {showCommentsModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm md:p-4" onClick={() => setShowCommentsModal(false)}>
-          <div className="bg-background border border-border w-full h-full md:w-full md:max-w-lg md:h-auto md:max-h-[80vh] md:rounded-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-background w-full h-full md:w-full md:max-w-lg md:h-auto md:max-h-[80vh] md:rounded-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 pt-8 border-b border-border flex justify-between items-center">
               <h3 className="font-bold text-foreground">Commentaires</h3>
               <button onClick={() => setShowCommentsModal(false)} className="text-muted-foreground hover:text-foreground">

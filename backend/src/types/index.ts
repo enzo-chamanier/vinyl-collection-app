@@ -5,7 +5,8 @@ export interface User {
   password: string
   profilePicture?: string
   bio?: string
-  isPublic: boolean
+  isPublic: boolean;
+  profileCategory?: string;
   createdAt: Date
   updatedAt: Date
 }
