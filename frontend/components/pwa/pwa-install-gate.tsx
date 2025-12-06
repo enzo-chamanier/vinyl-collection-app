@@ -10,7 +10,6 @@ interface PWAInstallGateProps {
 export function PWAInstallGate({ children }: PWAInstallGateProps) {
     const [showGate, setShowGate] = useState(false)
     const [isIOS, setIsIOS] = useState(false)
-    const [isDesktopResponsive, setIsDesktopResponsive] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
@@ -18,11 +17,8 @@ export function PWAInstallGate({ children }: PWAInstallGateProps) {
         if (typeof window === "undefined") return
 
         const checkPWA = () => {
-            // Detect mobile by user agent
-            const isMobileUA = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-
-            // Detect mobile by screen width (for responsive mode on desktop)
-            const isMobileWidth = window.innerWidth < 768
+            // Detect mobile by user agent only
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
             // Detect standalone mode (PWA installed)
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches
@@ -32,12 +28,8 @@ export function PWAInstallGate({ children }: PWAInstallGateProps) {
             const iOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
             setIsIOS(iOS)
 
-            // Detect if desktop in responsive mode (mobile width but desktop UA)
-            const desktopResponsive = isMobileWidth && !isMobileUA
-            setIsDesktopResponsive(desktopResponsive)
-
-            // If (mobile UA OR mobile width) AND not standalone → show gate
-            if ((isMobileUA || isMobileWidth) && !isStandalone) {
+            // If mobile AND not standalone → show gate
+            if (isMobile && !isStandalone) {
                 setShowGate(true)
             }
 
@@ -45,26 +37,6 @@ export function PWAInstallGate({ children }: PWAInstallGateProps) {
         }
 
         checkPWA()
-
-        // Re-check on resize (for responsive mode testing)
-        const handleResize = () => {
-            const isMobileUA = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-            const isMobileWidth = window.innerWidth < 768
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-                || (window.navigator as any).standalone === true
-
-            const desktopResponsive = isMobileWidth && !isMobileUA
-            setIsDesktopResponsive(desktopResponsive)
-
-            if (isMobileWidth && !isStandalone) {
-                setShowGate(true)
-            } else if (!isMobileWidth) {
-                setShowGate(false)
-            }
-        }
-
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
     }, [])
 
     // Show nothing while checking
@@ -99,58 +71,13 @@ export function PWAInstallGate({ children }: PWAInstallGateProps) {
                         </div>
 
                         <h2 className="text-xl font-bold text-center mb-2">
-                            {isDesktopResponsive ? "Accédez depuis un mobile" : "Installez l'application"}
+                            Installez l'application
                         </h2>
                         <p className="text-neutral-400 text-center text-sm mb-6">
-                            {isDesktopResponsive
-                                ? "Pour utiliser Discory, veuillez accéder à l'application depuis votre téléphone et l'installer sur votre écran d'accueil."
-                                : "Pour une meilleure expérience, ajoutez Discory à votre écran d'accueil."
-                            }
+                            Pour une meilleure expérience, ajoutez Discory à votre écran d'accueil.
                         </p>
 
-                        {isDesktopResponsive ? (
-                            // Desktop in responsive mode - show instructions to use real mobile
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-sm text-neutral-300 uppercase tracking-wide">
-                                    Comment installer l'application
-                                </h3>
-
-                                <div className="space-y-3">
-                                    <div className="flex items-start gap-3 bg-neutral-800/50 rounded-lg p-3">
-                                        <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center shrink-0">
-                                            <span className="text-purple-400 font-bold text-sm">1</span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm">
-                                                Ouvrez <strong>Safari</strong> (iOS) ou <strong>Chrome</strong> (Android) sur votre téléphone
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-start gap-3 bg-neutral-800/50 rounded-lg p-3">
-                                        <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center shrink-0">
-                                            <span className="text-purple-400 font-bold text-sm">2</span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm">
-                                                Accédez à <br></br><strong><a href="https://discory-fr.netlify.app" className="hover:underline" target="_blank">https://discory-fr.netlify.app</a></strong>
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-start gap-3 bg-neutral-800/50 rounded-lg p-3">
-                                        <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center shrink-0">
-                                            <span className="text-purple-400 font-bold text-sm">3</span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm">
-                                                Suivez les instructions pour ajouter l'app à votre écran d'accueil
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : isIOS ? (
+                        {isIOS ? (
                             // iOS Instructions
                             <div className="space-y-4">
                                 <h3 className="font-semibold text-sm text-neutral-300 uppercase tracking-wide">

@@ -2,6 +2,7 @@
   "name": "Discory - Vinyl Collection Manager",
   "short_name": "Discory",
   "description": "Scan, organize, and share your vinyl collection",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
 import { useRouter } from "next/navigation"
-import { Heart, MessageCircle, UserPlus, UserCheck, Loader2, Check, X, Bell, ArrowLeft } from "lucide-react"
-import { subscribeUserToPush } from "@/lib/push"
+import { Heart, MessageCircle, UserPlus, UserCheck, Loader2, Check, X, Bell, ArrowLeft, AlertCircle } from "lucide-react"
+import { subscribeUserToPush, isPushSupported, getPushPermissionStatus } from "@/lib/push"
 
 interface Notification {
     id: string
@@ -25,6 +25,9 @@ export default function NotificationsPage() {
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [loading, setLoading] = useState(true)
     const [isPushEnabled, setIsPushEnabled] = useState(false)
+    const [pushSupported, setPushSupported] = useState(true)
+    const [permissionStatus, setPermissionStatus] = useState<string>("default")
+    const [isSubscribing, setIsSubscribing] = useState(false)
     const router = useRouter()
 
     const fetchNotifications = async () => {
@@ -47,15 +50,31 @@ export default function NotificationsPage() {
     useEffect(() => {
         fetchNotifications()
 
-        if ("Notification" in window) {
-            setIsPushEnabled(Notification.permission === "granted")
+        // Check push support and permission
+        const supported = isPushSupported()
+        setPushSupported(supported)
+
+        if (supported) {
+            const status = getPushPermissionStatus()
+            setPermissionStatus(status)
+            setIsPushEnabled(status === "granted")
         }
     }, [])
 
     const handleEnablePush = async () => {
-        const success = await subscribeUserToPush()
-        if (success) {
-            setIsPushEnabled(true)
+        setIsSubscribing(true)
+        try {
+            const success = await subscribeUserToPush()
+            if (success) {
+                setIsPushEnabled(true)
+                setPermissionStatus("granted")
+            } else {
+                // Re-check permission status after attempt
+                const status = getPushPermissionStatus()
+                setPermissionStatus(status)
+            }
+        } finally {
+            setIsSubscribing(false)
         }
     }
 
@@ -181,15 +200,31 @@ export default function NotificationsPage() {
                         </button>
                         <h1 className="text-2xl font-bold">Notifications</h1>
                     </div>
-                    <div className="flex gap-2 pl-2">
-                        {!isPushEnabled && (
+                    <div className="flex gap-2 pl-2 flex-wrap">
+                        {!pushSupported ? (
+                            <div className="text-sm text-neutral-500 flex items-center gap-2">
+                                <AlertCircle size={14} />
+                                Push non supporté
+                            </div>
+                        ) : permissionStatus === "denied" ? (
+                            <div className="text-sm text-orange-400 flex items-center gap-2">
+                                <AlertCircle size={14} />
+                                Push bloqué (vérifiez les paramètres)
+                            </div>
+                        ) : !isPushEnabled ? (
                             <button
                                 onClick={handleEnablePush}
-                                className="text-sm bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2"
+                                disabled={isSubscribing}
+                                className="text-sm bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
                             >
-                                <Bell size={14} /> Activer push
+                                {isSubscribing ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                    <Bell size={14} />
+                                )}
+                                {isSubscribing ? "Activation..." : "Activer push"}
                             </button>
-                        )}
+                        ) : null}
                         {notifications.some(n => !n.is_read) && (
                             <button
                                 onClick={markAllAsRead}
