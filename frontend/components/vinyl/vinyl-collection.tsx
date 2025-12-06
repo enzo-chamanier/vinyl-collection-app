@@ -30,9 +30,13 @@ interface VinylCollectionProps {
   loading: boolean
   onUpdate: () => void
   title?: string
+  totalCount?: number
+  onLoadMore?: () => void
+  loadingMore?: boolean
+  hasMore?: boolean
 }
 
-export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre collection" }: VinylCollectionProps) {
+export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre collection", totalCount, onLoadMore, loadingMore, hasMore }: VinylCollectionProps) {
   const [selectedArtist, setSelectedArtist] = useState<string>("")
   const [selectedFormat, setSelectedFormat] = useState<"all" | "vinyl" | "cd">("all")
   const [searchQuery, setSearchQuery] = useState("")
@@ -171,7 +175,14 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
       <div ref={headerRef} className="flex flex-col gap-4 mb-6 sticky top-0 md:top-16 z-40 bg-background py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h2 className="text-2xl text-primary font-bold">{title} ({filteredVinyls.length})</h2>
+            <h2 className="text-2xl text-primary font-bold">
+              {title} ({totalCount ?? filteredVinyls.length})
+              {totalCount && filteredVinyls.length !== totalCount && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  ({filteredVinyls.length} affichés)
+                </span>
+              )}
+            </h2>
             {isSelectionMode && (
               <span className="text-sm text-muted-foreground">{selectedIds.size} sélectionné(s)</span>
             )}
@@ -305,7 +316,65 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
             ))}
           </div>
         )}
+
+        {/* Load more trigger with auto-scroll */}
+        {onLoadMore && hasMore && (
+          <LoadMoreTrigger
+            onLoadMore={onLoadMore}
+            loadingMore={loadingMore}
+            loadedCount={vinyls.length}
+            totalCount={totalCount}
+          />
+        )}
       </div>
+    </div>
+  )
+}
+
+// Separate component to handle intersection observer
+function LoadMoreTrigger({
+  onLoadMore,
+  loadingMore,
+  loadedCount,
+  totalCount
+}: {
+  onLoadMore: () => void
+  loadingMore?: boolean
+  loadedCount: number
+  totalCount?: number
+}) {
+  const triggerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const currentRef = triggerRef.current
+    if (!currentRef || loadingMore) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loadingMore) {
+          onLoadMore()
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    )
+
+    observer.observe(currentRef)
+
+    return () => observer.disconnect()
+  }, [onLoadMore, loadingMore])
+
+  return (
+    <div ref={triggerRef} className="flex justify-center py-8 min-h-[80px]">
+      {loadingMore ? (
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      ) : (
+        <button
+          onClick={onLoadMore}
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition"
+        >
+          Charger plus ({loadedCount} / {totalCount})
+        </button>
+      )}
     </div>
   )
 }

@@ -17,6 +17,8 @@ interface FeedItemData {
     date_added: string
     vinyl_color?: string
     disc_count?: number
+    disc_name?: string
+    format?: string
     likes_count?: number
     comments_count?: number
     has_liked?: boolean
@@ -25,6 +27,8 @@ interface FeedItemData {
 
 interface TikTokFeedProps {
     items: FeedItemData[]
+    onLoadMore?: () => void
+    hasMore?: boolean
 }
 
 interface DeezerTrack {
@@ -34,7 +38,7 @@ interface DeezerTrack {
     artist: { name: string }
 }
 
-export function TikTokFeed({ items }: TikTokFeedProps) {
+export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
     const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined)
     const [showComments, setShowComments] = useState(false)
@@ -168,13 +172,18 @@ export function TikTokFeed({ items }: TikTokFeedProps) {
             setTimeout(() => {
                 setCurrentIndex(index)
                 setSwipeDirection(null)
-            }, 150)
+            }, 250)
             if (audioRef.current) {
                 audioRef.current.pause()
             }
             setIsPlaying(false)
+
+            // Load more items when approaching the end (3 items before end)
+            if (index >= items.length - 3 && hasMore && onLoadMore) {
+                onLoadMore()
+            }
         }
-    }, [items.length])
+    }, [items.length, hasMore, onLoadMore])
 
     // Keyboard navigation
     useEffect(() => {
@@ -253,13 +262,19 @@ export function TikTokFeed({ items }: TikTokFeedProps) {
         }
     }
 
-    // Double tap to like
-    const handleDoubleTap = useCallback(() => {
+    // Single tap to pause/play, double tap to like
+    const singleTapTimeout = useRef<NodeJS.Timeout | null>(null)
+
+    const handleTap = useCallback(() => {
         const now = Date.now()
         const DOUBLE_TAP_DELAY = 300
 
         if (now - lastTapTime.current < DOUBLE_TAP_DELAY) {
-            // Double tap detected - like if not already liked
+            // Double tap detected - cancel single tap action and like
+            if (singleTapTimeout.current) {
+                clearTimeout(singleTapTimeout.current)
+                singleTapTimeout.current = null
+            }
             const itemId = items[currentIndex]?.id
             if (itemId && !likedItems[itemId]) {
                 handleLike(itemId)
@@ -267,6 +282,11 @@ export function TikTokFeed({ items }: TikTokFeedProps) {
             // Show heart animation
             setShowHeartAnimation(true)
             setTimeout(() => setShowHeartAnimation(false), 800)
+        } else {
+            // Single tap - schedule pause/play after delay
+            singleTapTimeout.current = setTimeout(() => {
+                setIsPlaying(prev => !prev)
+            }, DOUBLE_TAP_DELAY)
         }
         lastTapTime.current = now
     }, [currentIndex, items, likedItems])
@@ -387,10 +407,12 @@ export function TikTokFeed({ items }: TikTokFeedProps) {
             {showHeartAnimation && (
                 <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
                     <Heart
-                        size={120}
-                        fill="white"
-                        className="text-white animate-ping opacity-80"
-                        style={{ animationDuration: '0.6s' }}
+                        size={100}
+                        fill="#ff2d55"
+                        className="text-[#ff2d55] drop-shadow-lg"
+                        style={{
+                            animation: 'heartPop 0.6s ease-out forwards',
+                        }}
                     />
                 </div>
             )}
@@ -398,7 +420,7 @@ export function TikTokFeed({ items }: TikTokFeedProps) {
             {/* Main content */}
             <div
                 className="relative w-full h-full flex flex-col"
-                onClick={handleDoubleTap}
+                onClick={handleTap}
             >
                 {/* Cover image as background */}
                 <div className="absolute inset-0">
@@ -415,9 +437,11 @@ export function TikTokFeed({ items }: TikTokFeedProps) {
 
                 {/* Top section - Album cover centered */}
                 <div
-                    className={`flex-1 flex items-center justify-center px-4 transition-all duration-150 ease-out ${swipeDirection === 'up' ? 'translate-y-[-100px] opacity-0' :
-                        swipeDirection === 'down' ? 'translate-y-[100px] opacity-0' :
-                            'translate-y-0 opacity-100'
+                    className={`flex-1 flex items-center justify-center px-4 transition-all duration-300 ease-out ${swipeDirection === 'up'
+                        ? '-translate-y-full opacity-0 scale-90'
+                        : swipeDirection === 'down'
+                            ? 'translate-y-full opacity-0 scale-90'
+                            : 'translate-y-0 opacity-100 scale-100'
                         }`}
                 >
                     {/* Vinyl disc animation with cover - responsive sizes */}
@@ -433,8 +457,18 @@ export function TikTokFeed({ items }: TikTokFeedProps) {
                                 transform: 'translateX(-25%)'
                             }}
                         >
+                            {/* Center label with disc name */}
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/10" />
+                                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-black/60 flex flex-col items-center justify-center border border-white/10">
+                                    <span className="text-[6px] sm:text-[8px] text-white/60 font-medium uppercase">
+                                        {currentItem.format === 'CD' ? 'CD' : 'Vinyl'}
+                                    </span>
+                                    {currentItem.disc_name && (
+                                        <span className="text-[5px] sm:text-[7px] text-white/40 text-center px-1 truncate max-w-full">
+                                            {currentItem.disc_name}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             {/* Grooves */}
                             <div className="absolute inset-3 sm:inset-4 rounded-full border border-white/5" />
@@ -483,6 +517,22 @@ export function TikTokFeed({ items }: TikTokFeedProps) {
                         <h2 className="text-lg sm:text-xl font-bold text-white line-clamp-2">{currentItem.title}</h2>
                         <p className="text-sm text-white/70">{currentItem.artist.replace(/\s*\([^)]*\)/g, "")}</p>
 
+                        {/* Format badge */}
+                        <div className="mt-1 flex items-center gap-2 flex-wrap">
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${currentItem.format === 'CD'
+                                ? 'bg-blue-500/20 text-blue-300'
+                                : 'bg-amber-500/20 text-amber-300'
+                                }`}>
+                                {currentItem.format === 'cd' ? '💿 CD' : '🎵 Vinyle'}
+                            </span>
+                            {discCount > 1 && (
+                                <span className="text-white/50 text-xs">{discCount} disques</span>
+                            )}
+                            {currentItem.disc_name && (
+                                <span className="text-white/40 text-xs italic">"{currentItem.disc_name}"</span>
+                            )}
+                        </div>
+
                         {/* Audio controls */}
                         <div className="mt-3 flex items-center gap-3">
                             {audioLoading ? (
@@ -501,7 +551,7 @@ export function TikTokFeed({ items }: TikTokFeedProps) {
                                     >
                                         {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                                     </button>
-                                    {discCount > 1 && (
+                                    {discCount && (
                                         <span className="text-white/50 text-xs">{discCount}xLP</span>
                                     )}
                                 </>
@@ -550,57 +600,59 @@ export function TikTokFeed({ items }: TikTokFeedProps) {
             </div>
 
             {/* Comments Modal */}
-            {showComments && (
-                <div
-                    className={`absolute inset-0 z-50 flex items-end justify-center bg-black/60 ${commentsFullscreen ? 'pb-0' : 'pb-4'}`}
-                    style={{ animation: 'fadeIn 0.2s ease-out' }}
-                    onClick={closeComments}
-                >
+            {
+                showComments && (
                     <div
-                        className={`bg-neutral-900 w-full max-w-lg flex flex-col mx-2 transition-all duration-300 ${commentsFullscreen
-                            ? 'h-full rounded-none mx-0'
-                            : 'h-[65%] rounded-3xl'
-                            }`}
-                        style={{ animation: 'slideUp 0.3s ease-out' }}
-                        onClick={e => e.stopPropagation()}
+                        className={`absolute inset-0 z-50 flex items-end justify-center bg-black/60 ${commentsFullscreen ? 'pb-0' : 'pb-4'}`}
+                        style={{ animation: 'fadeIn 0.2s ease-out' }}
+                        onClick={closeComments}
                     >
-                        {/* Drag handle - click or drag to toggle fullscreen */}
                         <div
-                            className="flex flex-col items-center pt-3 pb-1 cursor-pointer touch-none"
-                            onTouchStart={handleCommentsDragStart}
-                            onTouchEnd={handleCommentsDragEnd}
-                            onClick={toggleCommentsFullscreen}
+                            className={`bg-neutral-900 w-full max-w-lg flex flex-col mx-2 transition-all duration-300 ${commentsFullscreen
+                                ? 'h-full rounded-none mx-0'
+                                : 'h-[65%] rounded-3xl'
+                                }`}
+                            style={{ animation: 'slideUp 0.3s ease-out' }}
+                            onClick={e => e.stopPropagation()}
                         >
-                            <div className="w-12 h-1.5 bg-white/40 rounded-full hover:bg-white/60 transition-colors" />
-                            <p className="text-white/30 text-xs mt-2 md:hidden">Glissez pour agrandir</p>
-                        </div>
-                        <div className="flex items-center justify-between px-4 pb-3 border-b border-neutral-800">
-                            <h3 className="font-bold text-white">Commentaires</h3>
-                            <div className="flex items-center gap-3">
-                                {/* Fullscreen toggle button (visible on desktop) */}
-                                <button
-                                    onClick={toggleCommentsFullscreen}
-                                    className="hidden md:block text-white/60 hover:text-white text-sm"
-                                >
-                                    {commentsFullscreen ? '↓ Réduire' : '↑ Agrandir'}
-                                </button>
-                                <button onClick={closeComments} className="text-white/60 hover:text-white text-lg">
-                                    ✕
-                                </button>
+                            {/* Drag handle - click or drag to toggle fullscreen */}
+                            <div
+                                className="flex flex-col items-center pt-3 pb-1 cursor-pointer touch-none"
+                                onTouchStart={handleCommentsDragStart}
+                                onTouchEnd={handleCommentsDragEnd}
+                                onClick={toggleCommentsFullscreen}
+                            >
+                                <div className="w-12 h-1.5 bg-white/40 rounded-full hover:bg-white/60 transition-colors" />
+                                <p className="text-white/30 text-xs mt-2 md:hidden">Glissez pour agrandir</p>
+                            </div>
+                            <div className="flex items-center justify-between px-4 pb-3 border-b border-neutral-800">
+                                <h3 className="font-bold text-white">Commentaires</h3>
+                                <div className="flex items-center gap-3">
+                                    {/* Fullscreen toggle button (visible on desktop) */}
+                                    <button
+                                        onClick={toggleCommentsFullscreen}
+                                        className="hidden md:block text-white/60 hover:text-white text-sm"
+                                    >
+                                        {commentsFullscreen ? '↓ Réduire' : '↑ Agrandir'}
+                                    </button>
+                                    <button onClick={closeComments} className="text-white/60 hover:text-white text-lg">
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto px-3 py-2 min-h-0">
+                                <CommentsSection
+                                    vinylId={currentItem.id}
+                                    currentUserId={currentUserId}
+                                    vinylOwnerId={currentItem.user_id}
+                                    onCommentAdded={() => setCommentCounts(prev => ({ ...prev, [currentItem.id]: (prev[currentItem.id] || 0) + 1 }))}
+                                    variant="modal"
+                                />
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto px-3 py-2 min-h-0">
-                            <CommentsSection
-                                vinylId={currentItem.id}
-                                currentUserId={currentUserId}
-                                vinylOwnerId={currentItem.user_id}
-                                onCommentAdded={() => setCommentCounts(prev => ({ ...prev, [currentItem.id]: (prev[currentItem.id] || 0) + 1 }))}
-                                variant="modal"
-                            />
-                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     )
 }

@@ -5,9 +5,22 @@ import { authMiddleware, type AuthRequest } from "../middleware/auth";
 
 const router = Router();
 
-// --- Get user's vinyls ---
+// --- Get user's vinyls (with pagination) ---
 router.get("/my-collection", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    // Get total count (matching the data query joins to ensure consistency)
+    const countResult = await query(
+      `SELECT COUNT(*) 
+       FROM vinyls v 
+       JOIN users u_owner ON v.user_id = u_owner.id
+       WHERE v.user_id = $1 OR v.shared_with_user_id = $1`,
+      [req.user?.userId]
+    );
+    const total = parseInt(countResult.rows[0].count);
+
     const result = await query(
       `SELECT v.*, 
               u_gift.username as gifted_by_username, 
@@ -18,13 +31,60 @@ router.get("/my-collection", authMiddleware, async (req: AuthRequest, res: Respo
        LEFT JOIN users u_gift ON v.gifted_by_user_id = u_gift.id
        LEFT JOIN users u_share ON v.shared_with_user_id = u_share.id
        WHERE v.user_id = $1 OR v.shared_with_user_id = $1
-       ORDER BY v.date_added DESC`,
-      [req.user?.userId]
+       ORDER BY v.date_added DESC, v.id DESC
+       LIMIT $2 OFFSET $3`,
+      [req.user?.userId, limit, offset]
     );
-    return res.json(result.rows);
+
+    return res.json({
+      data: result.rows,
+      hasMore: offset + result.rows.length < total,
+      total
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erreur lors de la récupération des vinyles" });
+  }
+});
+
+// --- Get collection stats (all vinyls for stats calculation) ---
+router.get("/stats", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(
+      `SELECT v.genre, v.artist
+       FROM vinyls v
+       JOIN users u_owner ON v.user_id = u_owner.id
+       WHERE v.user_id = $1 OR v.shared_with_user_id = $1`,
+      [req.user?.userId]
+    );
+
+    const vinyls = result.rows;
+    const genreCount: Record<string, number> = {};
+    const artistCount: Record<string, number> = {};
+
+    vinyls.forEach((vinyl: { genre?: string; artist?: string }) => {
+      const genres = vinyl.genre ? vinyl.genre.split(",").map((g: string) => g.trim()) : ["Inconnu"];
+      genres.forEach((g: string) => {
+        if (g) genreCount[g] = (genreCount[g] || 0) + 1;
+      });
+
+      const artistName = vinyl.artist ? vinyl.artist.replace(/\s*\([^)]*\)/g, "") : "Inconnu";
+      artistCount[artistName] = (artistCount[artistName] || 0) + 1;
+    });
+
+    return res.json({
+      total: vinyls.length,
+      genres: Object.entries(genreCount)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({ name, count })),
+      topArtists: Object.entries(artistCount)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({ name, count })),
+      totalArtists: Object.keys(artistCount).length
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors du calcul des statistiques" });
   }
 });
 

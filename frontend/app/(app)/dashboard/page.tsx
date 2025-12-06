@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { AppLayout } from "@/components/layout/app-layout"
 import { VinylCollection } from "@/components/vinyl/vinyl-collection"
 import { CollectionStats } from "@/components/stats/collection-stats"
 import { api } from "@/lib/api"
 import { FullScreenLoader } from "@/components/ui/full-screen-loader"
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 
 
 interface CollectionStatsType {
@@ -16,65 +17,70 @@ interface CollectionStatsType {
   totalArtists: number
 }
 
+interface Vinyl {
+  id: string
+  title: string
+  artist: string
+  genre: string
+  cover_image?: string
+  rating?: number
+  vinyl_color?: string
+  disc_count?: number
+  format?: "vinyl" | "cd"
+}
+
 export default function DashboardPage() {
   const router = useRouter()
-  const [vinyls, setVinyls] = useState([])
-  const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<CollectionStatsType | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
+
+  const fetchVinyls = useCallback(async (offset: number, limit: number) => {
+    const result = await api.get(`/vinyls/my-collection?limit=${limit}&offset=${offset}`)
+    return result
+  }, [])
+
+  const {
+    data: vinyls,
+    loading,
+    loadingMore,
+    hasMore,
+    total,
+    loadMore,
+    refresh,
+  } = useInfiniteScroll<Vinyl>({
+    fetchFn: fetchVinyls,
+    limit: 10,
+    initialLoad: false,
+  })
+
+  // Fetch stats separately (calculates on all vinyls)
+  const fetchStats = useCallback(async () => {
+    try {
+      const statsData = await api.get("/vinyls/stats")
+      setStats(statsData)
+    } catch (error) {
+      console.error("Error loading stats:", error)
+    }
+  }, [])
 
   useEffect(() => {
     const checkAuth = () => {
       const token = localStorage.getItem("token")
       if (!token) {
         router.push("/login")
-        return
+        return false
       }
+      return true
     }
 
-    checkAuth()
-    loadVinyls()
-  }, [])
-
-  const loadVinyls = async () => {
-    try {
-      const data = await api.get("/vinyls/my-collection")
-      setVinyls(data)
-      calculateStats(data)
-    } catch (error) {
-      console.error("Error loading vinyls:", error)
-    } finally {
-      setLoading(false)
+    if (checkAuth()) {
+      setAuthChecked(true)
+      refresh()
+      fetchStats()
     }
-  }
+  }, [router, refresh, fetchStats])
 
-  const calculateStats = (vinyls: any[]) => {
-    const genreCount: Record<string, number> = {}
-    const artistCount: Record<string, number> = {}
-
-    vinyls.forEach((vinyl) => {
-      const genres = vinyl.genre ? vinyl.genre.split(",").map((g: string) => g.trim()) : ["Inconnu"]
-      genres.forEach((g: string) => {
-        if (g) genreCount[g] = (genreCount[g] || 0) + 1
-      })
-
-      const artistName = vinyl.artist ? vinyl.artist.replace(/\s*\([^)]*\)/g, "") : "Inconnu"
-      artistCount[artistName] = (artistCount[artistName] || 0) + 1
-    })
-
-    setStats({
-      total: vinyls.length,
-      genres: Object.entries(genreCount)
-        .sort((a, b) => b[1] - a[1])
-        .map(([name, count]) => ({ name, count })),
-      topArtists: Object.entries(artistCount)
-        .sort((a, b) => b[1] - a[1])
-        .map(([name, count]) => ({ name, count })),
-      totalArtists: Object.keys(artistCount).length
-    })
-
-  }
-
-  if (loading) {
+  if (!authChecked || loading) {
     return <FullScreenLoader message="Chargement de votre collection..." />
   }
 
@@ -82,7 +88,15 @@ export default function DashboardPage() {
     <AppLayout>
       <div className="space-y-8">
         {stats && <CollectionStats stats={stats} />}
-        <VinylCollection vinyls={vinyls} loading={loading} onUpdate={loadVinyls} />
+        <VinylCollection
+          vinyls={vinyls}
+          loading={loading}
+          onUpdate={() => { refresh(); fetchStats(); }}
+          totalCount={total}
+          onLoadMore={loadMore}
+          loadingMore={loadingMore}
+          hasMore={hasMore}
+        />
       </div>
     </AppLayout>
   )

@@ -1,9 +1,10 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { api } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import { Heart, MessageCircle, UserPlus, UserCheck, Loader2, Check, X, Bell, ArrowLeft, AlertCircle } from "lucide-react"
 import { subscribeUserToPush, isPushSupported, getPushPermissionStatus } from "@/lib/push"
+import { InfiniteScrollTrigger } from "@/hooks/use-infinite-scroll"
 
 interface Notification {
     id: string
@@ -25,31 +26,59 @@ interface Notification {
 export default function NotificationsPage() {
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [loading, setLoading] = useState(true)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
+    const [offset, setOffset] = useState(0)
     const [isPushEnabled, setIsPushEnabled] = useState(false)
     const [pushSupported, setPushSupported] = useState(true)
     const [permissionStatus, setPermissionStatus] = useState<string>("default")
     const [isSubscribing, setIsSubscribing] = useState(false)
     const router = useRouter()
+    const LIMIT = 20
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = useCallback(async (isInitial = false) => {
         try {
-            const notifs = await api.get("/notifications")
+            if (isInitial) {
+                setLoading(true)
+                setOffset(0)
+            } else {
+                setLoadingMore(true)
+            }
+
+            const currentOffset = isInitial ? 0 : offset
+            const result = await api.get(`/notifications?limit=${LIMIT}&offset=${currentOffset}`)
+
             // Initialize local state from backend data
-            const mappedNotifs = notifs.map((n: Notification) => ({
+            const mappedNotifs = result.data.map((n: Notification) => ({
                 ...n,
                 isAccepted: n.has_accepted_request,
                 isFollowingBack: n.is_following_back
             }))
-            setNotifications(mappedNotifs)
+
+            if (isInitial) {
+                setNotifications(mappedNotifs)
+            } else {
+                setNotifications(prev => [...prev, ...mappedNotifs])
+            }
+
+            setHasMore(result.hasMore)
+            setOffset(currentOffset + mappedNotifs.length)
         } catch (error) {
             console.error("Failed to fetch notifications", error)
         } finally {
             setLoading(false)
+            setLoadingMore(false)
         }
-    }
+    }, [offset])
+
+    const loadMore = useCallback(() => {
+        if (!loadingMore && hasMore) {
+            fetchNotifications(false)
+        }
+    }, [fetchNotifications, loadingMore, hasMore])
 
     useEffect(() => {
-        fetchNotifications()
+        fetchNotifications(true)
 
         // Check push support and permission
         const supported = isPushSupported()
@@ -233,7 +262,7 @@ export default function NotificationsPage() {
                                 ) : (
                                     <Bell size={14} />
                                 )}
-                                {isSubscribing ? "Activation..." : "Activer push"}
+                                {isSubscribing ? "Activation..." : "Activer les notifications push"}
                             </button>
                         ) : null}
                         {notifications.some(n => !n.is_read) && (
@@ -315,6 +344,7 @@ export default function NotificationsPage() {
                                     )}
                                 </div>
                             ))}
+                            <InfiniteScrollTrigger onTrigger={loadMore} loading={loadingMore} hasMore={hasMore} />
                         </div>
                     )}
                 </div>

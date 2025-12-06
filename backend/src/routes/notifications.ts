@@ -4,11 +4,21 @@ import { authMiddleware, type AuthRequest } from "../middleware/auth";
 
 const router = Router();
 
-// Get user notifications
+// Get user notifications (with pagination)
 router.get("/", authMiddleware, async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.userId;
         if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
+
+        const limit = parseInt(req.query.limit as string) || 20;
+        const offset = parseInt(req.query.offset as string) || 0;
+
+        // Get total count
+        const countResult = await query(
+            `SELECT COUNT(*) FROM notifications WHERE recipient_id = $1`,
+            [userId]
+        );
+        const total = parseInt(countResult.rows[0].count);
 
         const result = await query(
             `SELECT n.id, n.type, n.reference_id, n.is_read, n.created_at, n.sender_id,
@@ -23,15 +33,19 @@ router.get("/", authMiddleware, async (req: AuthRequest, res: Response) => {
                     ) as has_accepted_request,
                     CASE WHEN n.type = 'VINYL_COMMENT' THEN c.vinyl_id ELSE NULL END as vinyl_id
              FROM notifications n
-             JOIN users u ON n.sender_id = u.id
+             LEFT JOIN users u ON n.sender_id = u.id
              LEFT JOIN comments c ON n.type = 'VINYL_COMMENT' AND n.reference_id = c.id
              WHERE n.recipient_id = $1
-             ORDER BY n.created_at DESC
-             LIMIT 50`,
-            [userId]
+             ORDER BY n.created_at DESC, n.id DESC
+             LIMIT $2 OFFSET $3`,
+            [userId, limit, offset]
         );
 
-        return res.json(result.rows);
+        return res.json({
+            data: result.rows,
+            hasMore: offset + result.rows.length < total,
+            total
+        });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: "Erreur lors de la récupération des notifications" });

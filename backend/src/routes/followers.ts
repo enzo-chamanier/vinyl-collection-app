@@ -248,11 +248,25 @@ router.get("/search/:searchQuery", async (req: AuthRequest, res: Response) => {
   }
 });
 
-// --- Get feed ---
+// --- Get feed (with pagination) ---
 router.get("/feed/recent", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const followerId = req.user?.userId;
     if (!followerId) return res.status(401).json({ error: "Utilisateur non authentifié" });
+
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    // Get total count
+    const countResult = await query(
+      `SELECT COUNT(*)
+       FROM vinyls v
+       INNER JOIN users u ON v.user_id = u.id
+       INNER JOIN follows f ON u.id = f.following_id
+       WHERE f.follower_id = $1 AND f.status = 'accepted'`,
+      [followerId]
+    );
+    const total = parseInt(countResult.rows[0].count);
 
     const feedRes = await query(
       `SELECT v.*, u.username, u.profile_picture,
@@ -263,12 +277,16 @@ router.get("/feed/recent", authMiddleware, async (req: AuthRequest, res: Respons
        INNER JOIN users u ON v.user_id = u.id
        INNER JOIN follows f ON u.id = f.following_id
        WHERE f.follower_id = $1 AND f.status = 'accepted'
-       ORDER BY v.date_added DESC
-       LIMIT 100`,
-      [followerId]
+       ORDER BY v.date_added DESC, v.id DESC
+       LIMIT $2 OFFSET $3`,
+      [followerId, limit, offset]
     );
 
-    return res.json(feedRes.rows);
+    return res.json({
+      data: feedRes.rows,
+      hasMore: offset + feedRes.rows.length < total,
+      total
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erreur lors de la récupération du flux" });
