@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { query } from "../config/database";
 import { authMiddleware, type AuthRequest } from "../middleware/auth";
+import { sendPushNotification } from "../utils/push";
 
 const router = Router();
 
@@ -39,6 +40,41 @@ router.post("/follow/:userId", authMiddleware, async (req: AuthRequest, res: Res
       [followId, followerId, userId, status]
     );
 
+    // Notify target user
+    const notificationType = status === 'accepted' ? "NEW_FOLLOWER" : "FOLLOW_REQUEST";
+    await query(
+      "INSERT INTO notifications (id, recipient_id, sender_id, type, reference_id) VALUES ($1, $2, $3, $4, $5)",
+      [uuidv4(), userId, followerId, notificationType, followerId]
+    );
+
+    // Send Push Notification
+    const subscriptions = await query("SELECT * FROM push_subscriptions WHERE user_id = $1", [userId]);
+    const senderRes = await query("SELECT username FROM users WHERE id = $1", [followerId]);
+    const senderName = senderRes.rows[0]?.username || "Quelqu'un";
+
+    const payload = JSON.stringify({
+      title: status === 'accepted' ? "Nouvel abonné !" : "Demande de suivi",
+      body: status === 'accepted' ? `${senderName} vous suit maintenant.` : `${senderName} souhaite vous suivre.`,
+      url: `/profile/${senderName}`
+    });
+
+    for (const sub of subscriptions.rows) {
+      try {
+        await sendPushNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload);
+      } catch (err) {
+        console.error("Failed to send push", err);
+      }
+    }
+
+    // Emit socket event
+    if (req.io) {
+      req.io.to(`user_${userId}`).emit("notification", {
+        title: status === 'accepted' ? "Nouvel abonné !" : "Demande de suivi",
+        body: status === 'accepted' ? `${senderName} vous suit maintenant.` : `${senderName} souhaite vous suivre.`,
+        url: `/profile/${senderName}`
+      });
+    }
+
     return res.status(201).json({
       message: status === 'accepted' ? "Suivi avec succès" : "Demande de suivi envoyée",
       status
@@ -46,6 +82,61 @@ router.post("/follow/:userId", authMiddleware, async (req: AuthRequest, res: Res
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erreur lors du suivi" });
+  }
+});
+
+// ... (rest of the file until accept)
+
+// --- Accept follow request ---
+router.post("/accept/:followerId", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { followerId } = req.params;
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
+
+    await query(
+      "UPDATE follows SET status = 'accepted' WHERE follower_id = $1 AND following_id = $2",
+      [followerId, userId]
+    );
+
+    // Notify the follower that their request was accepted
+    await query(
+      "INSERT INTO notifications (id, recipient_id, sender_id, type, reference_id) VALUES ($1, $2, $3, $4, $5)",
+      [uuidv4(), followerId, userId, "FOLLOW_ACCEPTED", userId]
+    );
+
+    // Send Push Notification
+    const subscriptions = await query("SELECT * FROM push_subscriptions WHERE user_id = $1", [followerId]);
+    const senderRes = await query("SELECT username FROM users WHERE id = $1", [userId]);
+    const senderName = senderRes.rows[0]?.username || "Quelqu'un";
+
+    const payload = JSON.stringify({
+      title: "Demande acceptée !",
+      body: `${senderName} a accepté votre demande de suivi.`,
+      url: `/profile/${senderName}`
+    });
+
+    for (const sub of subscriptions.rows) {
+      try {
+        await sendPushNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload);
+      } catch (err) {
+        console.error("Failed to send push", err);
+      }
+    }
+
+    // Emit socket event
+    if (req.io) {
+      req.io.to(`user_${followerId}`).emit("notification", {
+        title: "Demande acceptée !",
+        body: `${senderName} a accepté votre demande de suivi.`,
+        url: `/profile/${senderName}`
+      });
+    }
+
+    return res.json({ message: "Demande acceptée" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors de l'acceptation de la demande" });
   }
 });
 
@@ -263,24 +354,7 @@ router.get("/requests/sent", authMiddleware, async (req: AuthRequest, res: Respo
   }
 });
 
-// --- Accept follow request ---
-router.post("/accept/:followerId", authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const { followerId } = req.params;
-    const userId = req.user?.userId;
-    if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
 
-    await query(
-      "UPDATE follows SET status = 'accepted' WHERE follower_id = $1 AND following_id = $2",
-      [followerId, userId]
-    );
-
-    return res.json({ message: "Demande acceptée" });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Erreur lors de l'acceptation de la demande" });
-  }
-});
 
 // --- Reject follow request ---
 router.post("/reject/:followerId", authMiddleware, async (req: AuthRequest, res: Response) => {

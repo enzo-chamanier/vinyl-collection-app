@@ -35,6 +35,49 @@ router.post("/likes/:vinylId", authMiddleware, async (req: AuthRequest, res: Res
                 "INSERT INTO likes (id, user_id, vinyl_id) VALUES ($1, $2, $3)",
                 [likeId, userId, vinylId]
             );
+
+            // Notify vinyl owner
+            const vinylRes = await query("SELECT user_id, title FROM vinyls WHERE id = $1", [vinylId]);
+            if (vinylRes.rows.length > 0) {
+                const ownerId = vinylRes.rows[0].user_id;
+                const vinylTitle = vinylRes.rows[0].title;
+
+                if (ownerId !== userId) {
+                    await query(
+                        "INSERT INTO notifications (id, recipient_id, sender_id, type, reference_id) VALUES ($1, $2, $3, $4, $5)",
+                        [uuidv4(), ownerId, userId, "VINYL_LIKE", vinylId]
+                    );
+
+                    // Send Push Notification
+                    const subscriptions = await query("SELECT * FROM push_subscriptions WHERE user_id = $1", [ownerId]);
+                    const senderRes = await query("SELECT username FROM users WHERE id = $1", [userId]);
+                    const senderName = senderRes.rows[0]?.username || "Quelqu'un";
+
+                    const payload = JSON.stringify({
+                        title: "Nouveau like !",
+                        body: `${senderName} a aimé votre vinyle "${vinylTitle}".`,
+                        url: `/vinyl/${vinylId}`
+                    });
+
+                    for (const sub of subscriptions.rows) {
+                        try {
+                            await sendPushNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload);
+                        } catch (err) {
+                            console.error("Failed to send push", err);
+                        }
+                    }
+
+                    // Emit socket event
+                    if (req.io) {
+                        req.io.to(`user_${ownerId}`).emit("notification", {
+                            title: "Nouveau like !",
+                            body: `${senderName} a aimé votre vinyle "${vinylTitle}".`,
+                            url: `/vinyl/${vinylId}`
+                        });
+                    }
+                }
+            }
+
             return res.json({ liked: true });
         }
     } catch (error) {
@@ -121,6 +164,15 @@ router.post("/comments/:vinylId", authMiddleware, async (req: AuthRequest, res: 
                     } catch (err) {
                         console.error("Failed to send push", err);
                     }
+                }
+
+                // Emit socket event
+                if (req.io) {
+                    req.io.to(`user_${ownerId}`).emit("notification", {
+                        title: "Nouveau commentaire !",
+                        body: `${senderName} a commenté votre vinyle.`,
+                        url: `/vinyl/${vinylId}`
+                    });
                 }
             }
         }
@@ -218,6 +270,15 @@ router.post("/comments/:commentId/like", authMiddleware, async (req: AuthRequest
                             console.error("Failed to send push", err);
                             // Optional: Delete invalid subscription
                         }
+                    }
+
+                    // Emit socket event
+                    if (req.io) {
+                        req.io.to(`user_${authorId}`).emit("notification", {
+                            title: "Nouveau like !",
+                            body: `${senderName} a aimé votre commentaire.`,
+                            url: vinylId ? `/vinyl/${vinylId}` : "/"
+                        });
                     }
                 }
             }

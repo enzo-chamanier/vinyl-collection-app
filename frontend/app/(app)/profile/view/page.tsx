@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { api } from "@/lib/api"
-import { ArrowLeft, Lock } from "lucide-react"
+import { ArrowLeft, Lock, Loader2 } from "lucide-react"
 import { AppLayout } from "@/components/layout/app-layout"
 import { VinylCard } from "@/components/vinyl/vinyl-card"
 import { FullScreenLoader } from "@/components/ui/full-screen-loader"
@@ -124,19 +124,10 @@ function ProfileContent() {
         }
     }, [username])
 
-    if (loading) {
-        return <FullScreenLoader message="Chargement du profil..." />
-    }
-
-    if (error || !profile) {
-        return (
-            <div className="text-center text-red-500 py-8">{error || "Utilisateur introuvable"}</div>
-        )
-    }
-
-    const isOwner = currentUser?.id === profile.id
+    const isOwner = currentUser?.id === profile?.id
 
     const getDisplayedVinyls = () => {
+        if (!profile) return []
         if (activeTab === "gifted_to") {
             return profile.vinyls?.filter((v: any) => v.gifted_by_user_id) || []
         }
@@ -167,7 +158,7 @@ function ProfileContent() {
         return acc
     }, {})
 
-    const isPrivate = profile.is_private && !profile.is_following && !isOwner
+    const isPrivate = profile?.is_private && !profile?.is_following && !isOwner
 
     const handleFollowToggle = async () => {
         if (!profile) return
@@ -198,185 +189,197 @@ function ProfileContent() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto">
-            <button
-                onClick={() => router.back()}
-                className="flex items-center gap-2 text-foreground hover:text-muted-foreground hover:cursor-pointer mb-4 transition-colors"
-            >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Retour</span>
-            </button>
-
-            {/* Header Profil */}
-            <div className="bg-neutral-900 rounded-xl p-6 mb-8 border border-neutral-800">
-                <div className="flex flex-col md:flex-row items-center gap-6">
-                    <div className="relative">
-                        {profile.profile_picture ? (
-                            <img
-                                src={profile.profile_picture}
-                                alt={profile.username}
-                                className="w-24 h-24 rounded-full object-cover border-4 border-neutral-800"
-                            />
-                        ) : (
-                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center text-white text-3xl font-bold border-4 border-neutral-800 border-neutral-700">
-                                {profile.username.charAt(0).toUpperCase()}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex-1 text-center md:text-left">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-                            <h1 className="text-3xl font-bold text-white">{profile.username}</h1>
-                            {!isOwner && (
-                                <button
-                                    onClick={handleFollowToggle}
-                                    disabled={loadingFollow}
-                                    className={`px-6 py-2 rounded-lg font-semibold transition text-sm ${profile.is_following
-                                        ? "bg-neutral-800 border border-neutral-600 text-white hover:bg-neutral-700"
-                                        : profile.is_pending
-                                            ? "bg-neutral-800 border border-neutral-600 text-neutral-400 hover:bg-neutral-700"
-                                            : "bg-primary text-primary-foreground hover:bg-primary/90"
-                                        }`}
-                                >
-                                    {loadingFollow ? "..." : profile.is_following ? "Abonné" : profile.is_pending ? "Demande envoyée" : profile.is_followed_by ? "S'abonner en retour" : "S'abonner"}
-                                </button>
-                            )}
-                        </div>
-                        {profile.bio && (
-                            <p className="text-neutral-400 mb-2 max-w-2xl mx-auto md:mx-0">{profile.bio}</p>
-                        )}
-                        {profile.profileCategory && !isPrivate && (
-                            <div className="mb-4 flex justify-center md:justify-start">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground border border-border">
-                                    {profile.profileCategory}
-                                </span>
-                            </div>
-                        )}
-                        <div className="flex items-center justify-center md:justify-start gap-6 text-neutral-400">
-                            <div className="text-center">
-                                <span className="block text-xl font-bold text-white">{profile.followersCount || 0}</span>
-                                <span className="text-xs uppercase tracking-wider">Abonnés</span>
-                            </div>
-                            <div className="text-center">
-                                <span className="block text-xl font-bold text-white">{profile.followingCount || 0}</span>
-                                <span className="text-xs uppercase tracking-wider">Abonnements</span>
-                            </div>
-                            <div className="text-center">
-                                <span className="block text-xl font-bold text-white">{profile.vinyls?.length || 0}</span>
-                                <span className="text-xs uppercase tracking-wider">Vinyles</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div className="max-w-4xl mx-auto relative">
+            <div className="sticky top-0 z-40 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 border-b border-neutral-800 mb-6 -mx-4 px-4 md:mx-0 md:px-0">
+                <button
+                    onClick={() => router.back()}
+                    className="flex items-center gap-2 text-foreground hover:text-muted-foreground transition-colors"
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                    <span>Retour</span>
+                </button>
             </div>
 
-            {/* Contenu (Collection ou Privé) */}
-            {isPrivate ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center bg-card/50 rounded-xl border border-border border-dashed">
-                    <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center mb-4">
-                        <Lock className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-foreground mb-2">Ce profil est privé</h2>
-                    <p className="text-muted-foreground max-w-md">
-                        Abonnez-vous à cet utilisateur pour voir sa collection de vinyles.
-                    </p>
+            {loading ? (
+                <div className="flex justify-center py-20">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
+            ) : error || !profile ? (
+                <div className="text-center text-red-500 py-8">{error || "Utilisateur introuvable"}</div>
             ) : (
-                <div>
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
-                            <button
-                                onClick={() => setActiveTab("collection")}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "collection" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
-                            >
-                                Collection
-                            </button>
-                            <button
-                                onClick={() => setActiveTab("gifted_to")}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_to" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
-                            >
-                                Reçus 🎁
-                            </button>
-                            <button
-                                onClick={() => setActiveTab("gifted_by")}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_by" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
-                            >
-                                Offerts 💝
-                            </button>
-                        </div>
+                <>
+                    {/* Header Profil */}
+                    <div className="bg-neutral-900 rounded-xl p-6 mb-8 border border-neutral-800">
+                        <div className="flex flex-col md:flex-row items-center gap-6">
+                            <div className="relative">
+                                {profile.profile_picture ? (
+                                    <img
+                                        src={profile.profile_picture}
+                                        alt={profile.username}
+                                        className="w-24 h-24 rounded-full object-cover border-4 border-neutral-800"
+                                    />
+                                ) : (
+                                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center text-white text-3xl font-bold border-4 border-neutral-800 border-neutral-700">
+                                        {profile.username.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+                            </div>
 
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <input
-                                type="text"
-                                placeholder="Rechercher un vinyle..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm !text-black dark:!text-white placeholder:text-neutral-500 dark:placeholder:text-neutral-400 focus:border-primary outline-none w-full sm:w-64"
-                            />
-
-                            <select
-                                value={selectedFormat}
-                                onChange={(e) => setSelectedFormat(e.target.value as "all" | "vinyl" | "cd")}
-                                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm !text-black dark:!text-white focus:border-primary outline-none"
-                            >
-                                <option value="all">Tous</option>
-                                <option value="vinyl">Vinyles</option>
-                                <option value="cd">CDs</option>
-                            </select>
-
-                            <button
-                                onClick={() => setGroupByArtist(!groupByArtist)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition border ${groupByArtist
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "!bg-white dark:!bg-neutral-900 !text-neutral-600 dark:!text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-primary"
-                                    }`}
-                            >
-                                {groupByArtist ? "Vue par Artiste" : "Vue Grille"}
-                            </button>
-                        </div>
-                    </div>
-
-                    {groupByArtist ? (
-                        <div className="space-y-8">
-                            {Object.entries(vinylsByArtist).map(([artist, vinyls]: [string, any]) => (
-                                <div key={artist} className="bg-card rounded-xl p-6 border border-border/50">
-                                    <h3 className="text-xl font-bold text-foreground mb-4 border-b border-border pb-2">{artist}</h3>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                        {vinyls.map((vinyl: any) => (
-                                            <VinylCard
-                                                key={vinyl.id}
-                                                vinyl={vinyl}
-                                                onUpdate={fetchProfile}
-                                                readOnly={!isOwner || activeTab === "gifted_by"}
-                                                currentUserId={currentUser?.id}
-                                                currentUsername={currentUser?.username}
-                                            />
-                                        ))}
+                            <div className="flex-1 text-center md:text-left">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                                    <h1 className="text-3xl font-bold text-white">{profile.username}</h1>
+                                    {!isOwner && (
+                                        <button
+                                            onClick={handleFollowToggle}
+                                            disabled={loadingFollow}
+                                            className={`px-6 py-2 rounded-lg font-semibold transition text-sm ${profile.is_following
+                                                ? "bg-neutral-800 border border-neutral-600 text-white hover:bg-neutral-700"
+                                                : profile.is_pending
+                                                    ? "bg-neutral-800 border border-neutral-600 text-neutral-400 hover:bg-neutral-700"
+                                                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                                                }`}
+                                        >
+                                            {loadingFollow ? "..." : profile.is_following ? "Abonné" : profile.is_pending ? "Demande envoyée" : profile.is_followed_by ? "S'abonner en retour" : "S'abonner"}
+                                        </button>
+                                    )}
+                                </div>
+                                {profile.bio && (
+                                    <p className="text-neutral-400 mb-2 max-w-2xl mx-auto md:mx-0">{profile.bio}</p>
+                                )}
+                                {profile.profileCategory && !isPrivate && (
+                                    <div className="mb-4 flex justify-center md:justify-start">
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground border border-border">
+                                            {profile.profileCategory}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="flex items-center justify-center md:justify-start gap-6 text-neutral-400">
+                                    <div className="text-center">
+                                        <span className="block text-xl font-bold text-white">{profile.followersCount || 0}</span>
+                                        <span className="text-xs uppercase tracking-wider">Abonnés</span>
+                                    </div>
+                                    <div className="text-center">
+                                        <span className="block text-xl font-bold text-white">{profile.followingCount || 0}</span>
+                                        <span className="text-xs uppercase tracking-wider">Abonnements</span>
+                                    </div>
+                                    <div className="text-center">
+                                        <span className="block text-xl font-bold text-white">{profile.vinyls?.length || 0}</span>
+                                        <span className="text-xs uppercase tracking-wider">Vinyles</span>
                                     </div>
                                 </div>
-                            ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Contenu (Collection ou Privé) */}
+                    {isPrivate ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-center bg-card/50 rounded-xl border border-border border-dashed">
+                            <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center mb-4">
+                                <Lock className="w-8 h-8 text-muted-foreground" />
+                            </div>
+                            <h2 className="text-xl font-semibold text-foreground mb-2">Ce profil est privé</h2>
+                            <p className="text-muted-foreground max-w-md">
+                                Abonnez-vous à cet utilisateur pour voir sa collection de vinyles.
+                            </p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                            {filteredVinyls.map((vinyl: any) => (
-                                <VinylCard
-                                    key={vinyl.id}
-                                    vinyl={vinyl}
-                                    onUpdate={fetchProfile}
-                                    readOnly={!isOwner || activeTab === "gifted_by"}
-                                    currentUserId={currentUser?.id}
-                                    currentUsername={currentUser?.username}
-                                />
-                            ))}
-                        </div>
-                    )}
+                        <div>
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                                <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
+                                    <button
+                                        onClick={() => setActiveTab("collection")}
+                                        className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "collection" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+                                    >
+                                        Collection
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab("gifted_to")}
+                                        className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_to" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+                                    >
+                                        Reçus 🎁
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab("gifted_by")}
+                                        className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_by" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+                                    >
+                                        Offerts 💝
+                                    </button>
+                                </div>
 
-                    {filteredVinyls.length === 0 && (
-                        <div className="text-center py-12 text-muted-foreground bg-card/30 rounded-lg">
-                            Aucun vinyle trouvé.
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <input
+                                        type="text"
+                                        placeholder="Rechercher un vinyle..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm !text-black dark:!text-white placeholder:text-neutral-500 dark:placeholder:text-neutral-400 focus:border-primary outline-none w-full sm:w-64"
+                                    />
+
+                                    <select
+                                        value={selectedFormat}
+                                        onChange={(e) => setSelectedFormat(e.target.value as "all" | "vinyl" | "cd")}
+                                        className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm !text-black dark:!text-white focus:border-primary outline-none"
+                                    >
+                                        <option value="all">Tous</option>
+                                        <option value="vinyl">Vinyles</option>
+                                        <option value="cd">CDs</option>
+                                    </select>
+
+                                    <button
+                                        onClick={() => setGroupByArtist(!groupByArtist)}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition border ${groupByArtist
+                                            ? "bg-primary text-primary-foreground border-primary"
+                                            : "!bg-white dark:!bg-neutral-900 !text-neutral-600 dark:!text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-primary"
+                                            }`}
+                                    >
+                                        {groupByArtist ? "Vue par Artiste" : "Vue Grille"}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {groupByArtist ? (
+                                <div className="space-y-8">
+                                    {Object.entries(vinylsByArtist).map(([artist, vinyls]: [string, any]) => (
+                                        <div key={artist} className="bg-card rounded-xl p-6 border border-border/50">
+                                            <h3 className="text-xl font-bold text-foreground mb-4 border-b border-border pb-2">{artist}</h3>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                                {vinyls.map((vinyl: any) => (
+                                                    <VinylCard
+                                                        key={vinyl.id}
+                                                        vinyl={vinyl}
+                                                        onUpdate={fetchProfile}
+                                                        readOnly={!isOwner || activeTab === "gifted_by"}
+                                                        currentUserId={currentUser?.id}
+                                                        currentUsername={currentUser?.username}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                    {filteredVinyls.map((vinyl: any) => (
+                                        <VinylCard
+                                            key={vinyl.id}
+                                            vinyl={vinyl}
+                                            onUpdate={fetchProfile}
+                                            readOnly={!isOwner || activeTab === "gifted_by"}
+                                            currentUserId={currentUser?.id}
+                                            currentUsername={currentUser?.username}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+
+                            {filteredVinyls.length === 0 && (
+                                <div className="text-center py-12 text-muted-foreground bg-card/30 rounded-lg">
+                                    Aucun vinyle trouvé.
+                                </div>
+                            )}
                         </div>
                     )}
-                </div>
+                </>
             )}
         </div>
     )

@@ -117,13 +117,25 @@ export function ProfileCard({ profile, isOwnProfile = false, onUpdate }: Profile
               {/* Action Buttons */}
               <div className="flex gap-2 justify-center md:justify-end">
                 {isOwnProfile ? (
-                  <button
-                    onClick={() => setShowEditModal(true)}
-                    className="bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border px-4 py-2 rounded-lg font-medium transition text-sm flex items-center gap-2"
-                  >
-                    <Settings size={16} />
-                    Modifier
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => setShowEditModal(true)}
+                      className="bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border px-4 py-2 rounded-lg font-medium transition text-sm flex items-center gap-2"
+                    >
+                      <Settings size={16} />
+                      Modifier
+                    </button>
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem("token")
+                        localStorage.removeItem("user")
+                        window.location.href = "/login"
+                      }}
+                      className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-4 py-2 rounded-lg font-medium transition text-sm flex items-center gap-2"
+                    >
+                      Déconnexion
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={isFollowing ? handleUnfollow : handleFollow}
@@ -174,34 +186,38 @@ export function ProfileCard({ profile, isOwnProfile = false, onUpdate }: Profile
             </div>
           </div>
         </div>
-      </div>
+      </div >
 
       {/* Modals */}
-      {isOwnProfile && (
-        <EditProfileModal
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          currentUser={{
-            username: profile.user.username,
-            bio: profile.user.bio,
-            isPublic: profile.user.isPublic,
-            profilePicture: profile.user.profile_picture,
-            profileCategory: profile.user.profileCategory
-          }}
-          onUpdate={() => {
-            onUpdate?.()
-          }}
-        />
-      )}
+      {
+        isOwnProfile && (
+          <EditProfileModal
+            isOpen={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            currentUser={{
+              username: profile.user.username,
+              bio: profile.user.bio,
+              isPublic: profile.user.isPublic,
+              profilePicture: profile.user.profile_picture,
+              profileCategory: profile.user.profileCategory
+            }}
+            onUpdate={() => {
+              onUpdate?.()
+            }}
+          />
+        )
+      }
 
-      {profile?.user?.id && (
-        <FollowListModal
-          userId={profile.user.id}
-          type={modalType || "followers"}
-          isOpen={!!modalType}
-          onClose={() => setModalType(null)}
-        />
-      )}
+      {
+        profile?.user?.id && (
+          <FollowListModal
+            userId={profile.user.id}
+            type={modalType || "followers"}
+            isOpen={!!modalType}
+            onClose={() => setModalType(null)}
+          />
+        )
+      }
     </>
   )
 }

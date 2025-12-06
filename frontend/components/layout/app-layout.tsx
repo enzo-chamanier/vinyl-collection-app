@@ -35,7 +35,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header - Always Dark */}
-      <header className="bg-neutral-950 border-b border-neutral-800 md:sticky md:top-0 z-50">
+      <header className="hidden md:block bg-neutral-950 border-b border-neutral-800 fixed top-0 w-full z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="Discory Logo" className="w-8 h-8 invert" />
@@ -81,8 +81,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 bg-background pb-16 md:pb-0">
-        <div className="max-w-7xl mx-auto px-4 py-8">{children}</div>
+      <main className="flex-1 bg-background pb-16 md:pb-0 app-main">
+        <div className="max-w-7xl mx-auto px-4 py-4">{children}</div>
       </main>
 
       <MobileNav />

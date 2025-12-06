@@ -2,8 +2,11 @@ import type { Request, Response, NextFunction } from "express"
 import jwt from "jsonwebtoken"
 import type { JwtPayload } from "../types"
 
+import type { Server } from "socket.io"
+
 export interface AuthRequest extends Request {
   user?: JwtPayload
+  io?: Server
 }
 
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {

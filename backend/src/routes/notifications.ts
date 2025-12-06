@@ -11,8 +11,16 @@ router.get("/", authMiddleware, async (req: AuthRequest, res: Response) => {
         if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
 
         const result = await query(
-            `SELECT n.id, n.type, n.reference_id, n.is_read, n.created_at,
-                    u.username as sender_username, u.profile_picture as sender_profile_picture
+            `SELECT n.id, n.type, n.reference_id, n.is_read, n.created_at, n.sender_id,
+                    u.username as sender_username, u.profile_picture as sender_profile_picture,
+                    EXISTS(
+                        SELECT 1 FROM follows f 
+                        WHERE f.follower_id = $1 AND f.following_id = n.sender_id AND f.status = 'accepted'
+                    ) as is_following_back,
+                    EXISTS(
+                        SELECT 1 FROM follows f 
+                        WHERE f.follower_id = n.sender_id AND f.following_id = $1 AND f.status = 'accepted'
+                    ) as has_accepted_request
              FROM notifications n
              JOIN users u ON n.sender_id = u.id
              WHERE n.recipient_id = $1

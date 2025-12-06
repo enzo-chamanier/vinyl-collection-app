@@ -143,3 +143,7 @@ select:focus {
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-muted-foreground;
 }
+
+.app-main {
+  padding-top: 4rem;
+}
