@@ -83,4 +83,33 @@ router.get("/unread-count", authMiddleware, async (req: AuthRequest, res: Respon
     }
 });
 
+// Subscribe to push notifications
+router.post("/subscribe", authMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        const subscription = req.body;
+
+        if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
+        if (!subscription || !subscription.endpoint) return res.status(400).json({ error: "Subscription invalide" });
+
+        await query(
+            `INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (user_id, endpoint) DO NOTHING`,
+            [
+                require("uuid").v4(),
+                userId,
+                subscription.endpoint,
+                subscription.keys.p256dh,
+                subscription.keys.auth
+            ]
+        );
+
+        return res.status(201).json({ message: "Subscription added" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Erreur lors de l'abonnement push" });
+    }
+});
+
 export default router;

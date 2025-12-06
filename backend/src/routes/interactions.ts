@@ -2,6 +2,7 @@ import { Router, type Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { query } from "../config/database";
 import { authMiddleware, type AuthRequest } from "../middleware/auth";
+import { sendPushNotification } from "../utils/push";
 
 const router = Router();
 
@@ -102,6 +103,25 @@ router.post("/comments/:vinylId", authMiddleware, async (req: AuthRequest, res: 
                     "INSERT INTO notifications (id, recipient_id, sender_id, type, reference_id) VALUES ($1, $2, $3, $4, $5)",
                     [uuidv4(), ownerId, userId, "VINYL_COMMENT", vinylId]
                 );
+
+                // Send Push Notification
+                const subscriptions = await query("SELECT * FROM push_subscriptions WHERE user_id = $1", [ownerId]);
+                const senderRes = await query("SELECT username FROM users WHERE id = $1", [userId]);
+                const senderName = senderRes.rows[0]?.username || "Quelqu'un";
+
+                const payload = JSON.stringify({
+                    title: "Nouveau commentaire !",
+                    body: `${senderName} a commenté votre vinyle.`,
+                    url: `/vinyl/${vinylId}`
+                });
+
+                for (const sub of subscriptions.rows) {
+                    try {
+                        await sendPushNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload);
+                    } catch (err) {
+                        console.error("Failed to send push", err);
+                    }
+                }
             }
         }
 
@@ -174,6 +194,31 @@ router.post("/comments/:commentId/like", authMiddleware, async (req: AuthRequest
                         "INSERT INTO notifications (id, recipient_id, sender_id, type, reference_id) VALUES ($1, $2, $3, $4, $5)",
                         [uuidv4(), authorId, userId, "COMMENT_LIKE", commentId]
                     );
+
+                    // Send Push Notification
+                    const subscriptions = await query("SELECT * FROM push_subscriptions WHERE user_id = $1", [authorId]);
+                    const senderRes = await query("SELECT username FROM users WHERE id = $1", [userId]);
+                    const senderName = senderRes.rows[0]?.username || "Quelqu'un";
+
+
+
+                    // We need vinyl_id for the URL. Let's fetch it.
+                    const vinylIdRes = await query("SELECT vinyl_id FROM comments WHERE id = $1", [commentId]);
+                    const vinylId = vinylIdRes.rows[0]?.vinyl_id;
+                    const pushPayload = JSON.stringify({
+                        title: "Nouveau like !",
+                        body: `${senderName} a aimé votre commentaire.`,
+                        url: vinylId ? `/vinyl/${vinylId}` : "/"
+                    });
+
+                    for (const sub of subscriptions.rows) {
+                        try {
+                            await sendPushNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, pushPayload);
+                        } catch (err) {
+                            console.error("Failed to send push", err);
+                            // Optional: Delete invalid subscription
+                        }
+                    }
                 }
             }
 

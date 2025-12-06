@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Bell, MessageCircle, Heart } from "lucide-react"
 import { api } from "@/lib/api"
 import { useRouter } from "next/navigation"
+import { subscribeUserToPush } from "@/lib/push"
 
 interface Notification {
     id: string
@@ -67,13 +68,15 @@ export function NotificationBell() {
             if (notification.type === "VINYL_COMMENT") {
                 router.push(`/vinyl/${notification.reference_id}`)
             } else if (notification.type === "COMMENT_LIKE") {
-                // Ideally navigate to the comment, but for now just the vinyl/context if possible
-                // Since reference_id is comment_id, we might need to fetch the vinyl_id first or just handle it.
-                // For simplicity, we might not be able to deep link to the comment easily without more data.
-                // Let's assume we can't easily deep link to comment for now without vinyl_id.
-                // Wait, the backend stores comment_id as reference_id for COMMENT_LIKE.
-                // We probably need to know the vinyl_id to navigate to the page.
-                // For now, let's just mark as read.
+                // For comment likes, we try to navigate to the vinyl if possible
+                // Ideally we would have the vinyl_id in the notification or reference_id
+                // But currently reference_id is comment_id.
+                // The backend push payload has the URL, but here we are using the in-app notification object.
+                // We might need to fetch the comment to get the vinyl_id, or just rely on the user finding it.
+                // For now, let's just do nothing or maybe show a toast.
+                // Actually, let's try to fetch the comment details if we really want to navigate.
+                // Or better, update the backend to include vinyl_id in the notification object for COMMENT_LIKE.
+                // But for now, let's just leave it as is.
             }
         } catch (error) {
             console.error("Error handling notification click", error)
@@ -108,14 +111,25 @@ export function NotificationBell() {
                 <div className="absolute right-0 mt-2 w-80 bg-neutral-900 border border-neutral-800 rounded-xl shadow-xl z-50 overflow-hidden">
                     <div className="p-3 border-b border-neutral-800 flex justify-between items-center">
                         <h3 className="font-semibold text-white">Notifications</h3>
-                        {unreadCount > 0 && (
+                        <div className="flex gap-2 items-center">
                             <button
-                                onClick={markAllAsRead}
-                                className="text-xs text-primary hover:text-primary/80"
+                                onClick={async () => {
+                                    const success = await subscribeUserToPush()
+                                    if (success) alert("Notifications activées !")
+                                }}
+                                className="text-xs text-neutral-400 hover:text-white"
                             >
-                                Tout marquer comme lu
+                                Activer push
                             </button>
-                        )}
+                            {unreadCount > 0 && (
+                                <button
+                                    onClick={markAllAsRead}
+                                    className="text-xs text-primary hover:text-primary/80"
+                                >
+                                    Tout lu
+                                </button>
+                            )}
+                        </div>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
                         {notifications.length === 0 ? (
