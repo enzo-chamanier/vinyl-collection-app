@@ -341,6 +341,13 @@ export function ManualVinylForm({ onSubmit, loading = false }: ManualVinylFormPr
                     <option value="Classical">Classique</option>
                     <option value="Soul">Soul</option>
                     <option value="Alternatif">Alternatif</option>
+                    <option value="Indie">Indie</option>
+                    <option value="Metal">Metal</option>
+                    <option value="Rap">Rap</option>
+                    <option value="R&B">R&B</option>
+                    <option value="Country">Country</option>
+                    <option value="K-pop">K-pop</option>
+                    <option value="J-pop">J-pop</option>
                     <option value="Other">Autre</option>
                   </select>
                 </div>

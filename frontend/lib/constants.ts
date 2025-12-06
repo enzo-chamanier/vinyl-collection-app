@@ -1,8 +1,8 @@
 export const GENRES = [
   "Rock",
   "Pop",
-  "K-Pop",
-  "J-Pop",
+  "K-pop",
+  "J-pop",
   "Jazz",
   "Hip Hop",
   "Rap",
