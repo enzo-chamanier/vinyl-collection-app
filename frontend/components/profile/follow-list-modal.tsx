@@ -43,10 +43,21 @@ export function FollowListModal({ userId, type, isOpen, onClose }: FollowListMod
         }
     }
 
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = "hidden"
+        } else {
+            document.body.style.overflow = "unset"
+        }
+        return () => {
+            document.body.style.overflow = "unset"
+        }
+    }, [isOpen])
+
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4">
             <div className="bg-surface border border-border rounded-xl w-full max-w-md max-h-[80vh] flex flex-col">
                 <div className="flex items-center justify-between p-4 border-b border-border">
                     <h2 className="text-lg font-bold text-white">
@@ -75,7 +86,7 @@ export function FollowListModal({ userId, type, isOpen, onClose }: FollowListMod
                                             className="w-10 h-10 rounded-full object-cover"
                                         />
                                     ) : (
-                                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-800 to-black border border-border flex items-center justify-center text-white font-bold">
                                             {user.username.charAt(0).toUpperCase()}
                                         </div>
                                     )}

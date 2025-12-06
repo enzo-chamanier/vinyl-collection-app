@@ -23,8 +23,11 @@ interface Profile {
     id: string
     username: string
     profile_picture?: string
+    bio?: string
     is_private?: boolean
     is_following?: boolean
+    is_pending?: boolean
+    is_followed_by?: boolean
     followersCount?: number
     followingCount?: number
     vinyls?: Vinyl[]
@@ -40,6 +43,7 @@ function ProfileContent() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
     const [currentUser, setCurrentUser] = useState<any>(null)
+    const [loadingFollow, setLoadingFollow] = useState(false)
 
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedFormat, setSelectedFormat] = useState<"all" | "vinyl" | "cd">("all")
@@ -64,6 +68,8 @@ function ProfileContent() {
 
             const userId = data.user.id
             let isFollowing = false
+            let isPending = false
+            let isFollowedBy = false
             let followersCount = 0
             let followingCount = 0
 
@@ -74,6 +80,8 @@ function ProfileContent() {
                     api.get(`/followers/count/${userId}`)
                 ])
                 isFollowing = followRes.isFollowing
+                isPending = followRes.isPending
+                isFollowedBy = followRes.isFollowedBy
                 followersCount = countRes.followers
                 followingCount = countRes.following
             } catch (e) {
@@ -87,6 +95,8 @@ function ProfileContent() {
                 giftedVinyls: data.giftedVinyls,
                 stats: data.stats,
                 is_following: isFollowing,
+                is_pending: isPending,
+                is_followed_by: isFollowedBy,
                 followersCount,
                 followingCount,
                 // Ensure legacy fields mapping if needed
@@ -157,6 +167,34 @@ function ProfileContent() {
 
     const isPrivate = profile.is_private && !profile.is_following && !isOwner
 
+    const handleFollowToggle = async () => {
+        if (!profile) return
+        setLoadingFollow(true)
+        try {
+            if (profile.is_following || profile.is_pending) {
+                await api.delete(`/followers/unfollow/${profile.id}`)
+                setProfile(prev => prev ? {
+                    ...prev,
+                    is_following: false,
+                    is_pending: false,
+                    followersCount: prev.is_following ? (prev.followersCount || 0) - 1 : prev.followersCount
+                } : null)
+            } else {
+                const res = await api.post(`/followers/follow/${profile.id}`, {})
+                setProfile(prev => prev ? {
+                    ...prev,
+                    is_following: res.status === 'accepted',
+                    is_pending: res.status === 'pending',
+                    followersCount: res.status === 'accepted' ? (prev.followersCount || 0) + 1 : prev.followersCount
+                } : null)
+            }
+        } catch (error) {
+            console.error("Error toggling follow:", error)
+        } finally {
+            setLoadingFollow(false)
+        }
+    }
+
     return (
         <div className="max-w-4xl mx-auto">
             <button
@@ -168,35 +206,54 @@ function ProfileContent() {
             </button>
 
             {/* Header Profil */}
-            <div className="bg-card rounded-xl p-6 mb-8 border border-border">
+            <div className="bg-neutral-900 rounded-xl p-6 mb-8 border border-neutral-800">
                 <div className="flex flex-col md:flex-row items-center gap-6">
                     <div className="relative">
                         {profile.profile_picture ? (
                             <img
                                 src={profile.profile_picture}
                                 alt={profile.username}
-                                className="w-24 h-24 rounded-full object-cover border-4 border-background"
+                                className="w-24 h-24 rounded-full object-cover border-4 border-neutral-800"
                             />
                         ) : (
-                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-3xl font-bold border-4 border-background">
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center text-white text-3xl font-bold border-4 border-neutral-800 border-neutral-700">
                                 {profile.username.charAt(0).toUpperCase()}
                             </div>
                         )}
                     </div>
 
                     <div className="flex-1 text-center md:text-left">
-                        <h1 className="text-3xl font-bold text-foreground mb-2">{profile.username}</h1>
-                        <div className="flex items-center justify-center md:justify-start gap-6 text-muted-foreground">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                            <h1 className="text-3xl font-bold text-white">{profile.username}</h1>
+                            {!isOwner && (
+                                <button
+                                    onClick={handleFollowToggle}
+                                    disabled={loadingFollow}
+                                    className={`px-6 py-2 rounded-lg font-semibold transition text-sm ${profile.is_following
+                                        ? "bg-neutral-800 border border-neutral-600 text-white hover:bg-neutral-700"
+                                        : profile.is_pending
+                                            ? "bg-neutral-800 border border-neutral-600 text-neutral-400 hover:bg-neutral-700"
+                                            : "bg-primary text-primary-foreground hover:bg-primary/90"
+                                        }`}
+                                >
+                                    {loadingFollow ? "..." : profile.is_following ? "Abonné" : profile.is_pending ? "Demande envoyée" : profile.is_followed_by ? "S'abonner en retour" : "S'abonner"}
+                                </button>
+                            )}
+                        </div>
+                        {profile.bio && (
+                            <p className="text-neutral-400 mb-4 max-w-2xl mx-auto md:mx-0">{profile.bio}</p>
+                        )}
+                        <div className="flex items-center justify-center md:justify-start gap-6 text-neutral-400">
                             <div className="text-center">
-                                <span className="block text-xl font-bold text-foreground">{profile.followersCount || 0}</span>
+                                <span className="block text-xl font-bold text-white">{profile.followersCount || 0}</span>
                                 <span className="text-xs uppercase tracking-wider">Abonnés</span>
                             </div>
                             <div className="text-center">
-                                <span className="block text-xl font-bold text-foreground">{profile.followingCount || 0}</span>
+                                <span className="block text-xl font-bold text-white">{profile.followingCount || 0}</span>
                                 <span className="text-xs uppercase tracking-wider">Abonnements</span>
                             </div>
                             <div className="text-center">
-                                <span className="block text-xl font-bold text-foreground">{profile.vinyls?.length || 0}</span>
+                                <span className="block text-xl font-bold text-white">{profile.vinyls?.length || 0}</span>
                                 <span className="text-xs uppercase tracking-wider">Vinyles</span>
                             </div>
                         </div>

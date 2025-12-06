@@ -1,10 +1,11 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { api } from "@/lib/api"
 import { VinylColorPicker, type VinylColorData, getVinylBackground } from "./vinyl-color-picker"
 import { AlertCircle, CheckCircle } from "lucide-react"
+import { CommentsSection } from "../feed/comments-section"
 
 interface Vinyl {
   id: string
@@ -43,11 +44,24 @@ export function VinylCard({
   selected = false,
   onSelect,
   readOnly = false,
-  currentUsername
+  currentUsername,
+  currentUserId
 }: VinylCardProps) {
   const [showDelete, setShowDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showColorPicker, setShowColorPicker] = useState(false)
+  const [showCommentsModal, setShowCommentsModal] = useState(false)
+
+  useEffect(() => {
+    if (showCommentsModal) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = "unset"
+    }
+    return () => {
+      document.body.style.overflow = "unset"
+    }
+  }, [showCommentsModal])
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -107,8 +121,15 @@ export function VinylCard({
 
   return (
     <>
-      <div className="group relative">
-        <div className="relative aspect-square bg-card rounded-lg overflow-hidden">
+      <div
+        className="group relative"
+        onClick={() => {
+          if (!selectable && !readOnly) {
+            setShowCommentsModal(true)
+          }
+        }}
+      >
+        <div className="relative aspect-square bg-card rounded-lg overflow-hidden cursor-pointer">
           {selectable && (
             <div
               className={`absolute inset-0 z-30 flex items-center justify-center transition-colors ${selected ? "bg-primary/70" : "bg-black/10 hover:bg-black/70"}`}
@@ -127,42 +148,52 @@ export function VinylCard({
 
           {/* Vinyl Color Icons - Stacked for multi-disc */}
           {!selectable && (
-            <button
+            <div
               onClick={(e) => {
                 if (readOnly) return
                 e.stopPropagation()
-                setShowColorPicker(true)
+                // If clicking the color icon specifically, open color picker
+                // Otherwise the parent click handler will open comments
               }}
-              className={`absolute top-2 left-2 z-20 flex -space-x-2 transition-transform ${readOnly ? '' : 'hover:scale-110 cursor-pointer'}`}
-              title={readOnly ? "Voir les couleurs" : (isMissingColor ? "Définir les couleurs" : "Modifier les couleurs")}
+              className="absolute top-2 left-2 z-20 flex -space-x-2"
             >
-              {isMissingColor ? (
-                <div className="w-8 h-8 rounded-full bg-red-500 border-2 border-white/20 shadow-lg flex items-center justify-center">
-                  <AlertCircle size={16} className="text-white" />
-                </div>
-              ) : (
-                Array.from({ length: Math.min(discCount, 3) }).map((_, i) => {
-                  const color = displayColors[i]
-                  return (
-                    <div
-                      key={i}
-                      className="w-8 h-8 rounded-full shadow-lg flex items-center justify-center relative"
-                      style={{
-                        background: color ? getVinylBackground(color.type, color.primary, color.secondary, color.splatterSize, color.tertiary, color.quaternary) : "#1a1a1a",
-                        border: "2px solid rgba(255,255,255,0.2)",
-                        zIndex: 30 - i
-                      }}
-                    >
-                      <div className="w-2 h-2 rounded-full bg-black/20" />
-                      {/* Number indicator for multi-disc */}
-                      <span className="absolute -bottom-1 -right-1 bg-black text-[8px] text-white px-1 rounded-full border border-white/20">
-                        {i + 1}
-                      </span>
-                    </div>
-                  )
-                })
-              )}
-            </button>
+              <button
+                onClick={(e) => {
+                  if (readOnly) return
+                  e.stopPropagation()
+                  setShowColorPicker(true)
+                }}
+                className={`flex -space-x-2 transition-transform ${readOnly ? '' : 'hover:scale-110 cursor-pointer'}`}
+                title={readOnly ? "Voir les couleurs" : (isMissingColor ? "Définir les couleurs" : "Modifier les couleurs")}
+              >
+                {isMissingColor ? (
+                  <div className="w-8 h-8 rounded-full bg-red-500 border-2 border-white/20 shadow-lg flex items-center justify-center">
+                    <AlertCircle size={16} className="text-white" />
+                  </div>
+                ) : (
+                  Array.from({ length: Math.min(discCount, 3) }).map((_, i) => {
+                    const color = displayColors[i]
+                    return (
+                      <div
+                        key={i}
+                        className="w-8 h-8 rounded-full shadow-lg flex items-center justify-center relative"
+                        style={{
+                          background: color ? getVinylBackground(color.type, color.primary, color.secondary, color.splatterSize, color.tertiary, color.quaternary) : "#1a1a1a",
+                          border: "2px solid rgba(255,255,255,0.2)",
+                          zIndex: 30 - i
+                        }}
+                      >
+                        <div className="w-2 h-2 rounded-full bg-black/20" />
+                        {/* Number indicator for multi-disc */}
+                        <span className="absolute -bottom-1 -right-1 bg-black text-[8px] text-white px-1 rounded-full border border-white/20">
+                          {i + 1}
+                        </span>
+                      </div>
+                    )
+                  })
+                )}
+              </button>
+            </div>
           )}
 
           {vinyl.cover_image ? (
@@ -267,6 +298,28 @@ export function VinylCard({
           onSave={handleColorSave}
           onClose={() => setShowColorPicker(false)}
         />
+      )}
+
+      {showCommentsModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm md:p-4" onClick={() => setShowCommentsModal(false)}>
+          <div className="bg-background border border-border w-full h-full md:w-full md:max-w-lg md:h-auto md:max-h-[80vh] md:rounded-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 pt-8 border-b border-border flex justify-between items-center">
+              <h3 className="font-bold text-foreground">Commentaires</h3>
+              <button onClick={() => setShowCommentsModal(false)} className="text-muted-foreground hover:text-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden flex flex-col bg-background p-4 pb-12">
+              <CommentsSection
+                vinylId={vinyl.id}
+                currentUserId={currentUserId}
+                vinylOwnerId={vinyl.user_id}
+                onCommentAdded={() => { }}
+                variant="modal"
+              />
+            </div>
+          </div>
+        </div>
       )}
     </>
   )

@@ -32,7 +32,7 @@ export default function FeedPage() {
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-black">Votre Fil d'actualité</h1>
+        <h1 className="text-3xl font-bold mb-8 text-black dark:text-white">Votre Fil d'actualité</h1>
         <VinylFeed items={feed} loading={loading} />
       </div>
     </AppLayout>

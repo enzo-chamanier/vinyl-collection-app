@@ -100,7 +100,7 @@ export function ProfileCard({ profile, isOwnProfile = false, onUpdate }: Profile
                 className="w-24 h-24 rounded-full object-cover border-4 border-background"
               />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-3xl font-bold border-4 border-background">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center text-white text-3xl font-bold border-4 border-background border-border">
                 {profile.user.username.charAt(0).toUpperCase()}
               </div>
             )}

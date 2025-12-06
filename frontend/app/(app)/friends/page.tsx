@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { AppLayout } from "@/components/layout/app-layout"
 import { SearchUsers } from "@/components/friends/search-users"
+import { FollowRequests } from "@/components/friends/follow-requests"
+import { SentRequests } from "@/components/friends/sent-requests"
 import { FriendsList } from "@/components/friends/friends-list"
 import { api } from "@/lib/api"
 import { FullScreenLoader } from "@/components/ui/full-screen-loader"
@@ -63,6 +65,8 @@ export default function FriendsPage() {
         <SearchUsers query={searchQuery} onQueryChange={setSearchQuery} results={searchResults} searching={searching} />
 
         <div className="mt-12">
+          <FollowRequests />
+          <SentRequests />
           <h2 className="text-2xl text-primary font-bold mb-6">Vos abonnements</h2>
           <FriendsList following={following} />
         </div>

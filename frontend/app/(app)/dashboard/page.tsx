@@ -63,10 +63,11 @@ export default function DashboardPage() {
 
     setStats({
       total: vinyls.length,
-      genres: Object.entries(genreCount).map(([name, count]) => ({ name, count })),
+      genres: Object.entries(genreCount)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({ name, count })),
       topArtists: Object.entries(artistCount)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
         .map(([name, count]) => ({ name, count })),
       totalArtists: Object.keys(artistCount).length
     })

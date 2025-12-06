@@ -43,7 +43,7 @@ export function ProfilePreviewCard({ profile }: ProfilePreviewCardProps) {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-white text-lg truncate group-hover:text-primary transition-colors">
+                        <h3 className="font-bold text-white text-lg truncate group-hover:text-secondary dark:group-hover:text-primary transition-colors">
                             {profile.username}
                         </h3>
                     </div>
@@ -60,6 +60,11 @@ export function ProfilePreviewCard({ profile }: ProfilePreviewCardProps) {
                         {profile.is_public !== false && (
                             <span className="text-green-400/80 bg-green-400/10 px-1.5 py-0.5 rounded">
                                 Profil Public
+                            </span>
+                        )}
+                        {profile.is_public === false && (
+                            <span className="text-orange-400/80 bg-orange-400/10 px-1.5 py-0.5 rounded">
+                                Profil Privé
                             </span>
                         )}
                     </div>

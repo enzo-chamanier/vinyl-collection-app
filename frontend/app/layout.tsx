@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next"
 import { Geist } from "next/font/google"
 import { PWAReloadPrompt } from "@/components/pwa/pwa-reload-prompt"
 import { ThemeProvider } from "@/components/theme-provider"
+import { BackendAwakener } from "@/components/backend-awakener"
 
 import "./globals.css"
 
@@ -45,7 +46,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <BackendAwakener>
+            {children}
+          </BackendAwakener>
         </ThemeProvider>
         <PWAReloadPrompt />
       </body>

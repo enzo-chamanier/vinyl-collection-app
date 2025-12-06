@@ -8,6 +8,7 @@ import usersRouter from "./routes/users";
 import followersRouter from "./routes/followers";
 import scanRouter from "./routes/scan";
 import analyticsRouter from "./routes/analytics";
+import interactionsRouter from "./routes/interactions";
 import { errorHandler } from "./middleware/errorHandler";
 import { initDatabase } from "./config/initDatabase";
 import { authMiddleware } from "./middleware/auth";
@@ -31,6 +32,10 @@ app.get("/", (_req, res) => {
   res.send("🎵 Discory Backend is running!");
 });
 
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
 // Routes
 app.use("/api/auth", authRouter);
 app.use("/api/vinyls", authMiddleware, vinylesRouter);
@@ -38,6 +43,7 @@ app.use("/api/users", authMiddleware, usersRouter);
 app.use("/api/followers", authMiddleware, followersRouter);
 app.use("/api/scan", authMiddleware, scanRouter);
 app.use("/api/analytics", authMiddleware, analyticsRouter);
+app.use("/api/interactions", authMiddleware, interactionsRouter);
 
 // Error handling
 app.use(errorHandler);

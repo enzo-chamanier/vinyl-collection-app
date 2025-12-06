@@ -9,7 +9,8 @@ interface UserCardProps {
 }
 
 export function UserCard({ user }: UserCardProps) {
-  const [following, setFollowing] = useState<boolean | null>(null) // null = loading initial
+  const [followStatus, setFollowStatus] = useState<'accepted' | 'pending' | null>(null)
+  const [isFollowedBy, setIsFollowedBy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [stats, setStats] = useState<{ followers: number; following: number } | null>(null)
 
@@ -19,13 +20,12 @@ export function UserCard({ user }: UserCardProps) {
       try {
         // Vérifie si l'utilisateur est suivi
         const followRes = await api.get(`/followers/is-following/${user.id}`);
-        const isFollowing = followRes.isFollowing ?? false;
-        setFollowing(isFollowing);
+        setFollowStatus(followRes.status);
+        setIsFollowedBy(followRes.isFollowedBy);
 
         // Récupère les stats followers/following
         const statsRes = await api.get(`/followers/count/${user.id}`);
         if (!statsRes) {
-          console.warn("Pas de données reçues du backend pour les stats.");
           setStats({ followers: 0, following: 0 });
         } else {
           setStats({
@@ -43,19 +43,22 @@ export function UserCard({ user }: UserCardProps) {
   }, [user.id]);
 
   const handleFollowToggle = async () => {
-    if (following === null) return; // sécurité
     setLoading(true)
     try {
-      if (!following) {
-        // Suivre
-        await api.post(`/followers/follow/${user.id}`, {})
-        setFollowing(true)
-        setStats(prev => prev ? { ...prev, followers: prev.followers + 1 } : prev)
-      } else {
-        // Se désabonner
+      if (followStatus === 'accepted' || followStatus === 'pending') {
+        // Se désabonner ou annuler la demande
         await api.delete(`/followers/unfollow/${user.id}`)
-        setFollowing(false)
-        setStats(prev => prev ? { ...prev, followers: prev.followers - 1 } : prev)
+        setFollowStatus(null)
+        if (followStatus === 'accepted') {
+          setStats(prev => prev ? { ...prev, followers: prev.followers - 1 } : prev)
+        }
+      } else {
+        // Suivre
+        const res = await api.post(`/followers/follow/${user.id}`, {})
+        setFollowStatus(res.status)
+        if (res.status === 'accepted') {
+          setStats(prev => prev ? { ...prev, followers: prev.followers + 1 } : prev)
+        }
       }
     } catch (error) {
       console.error("Erreur lors du suivi/désabonnement :", error)
@@ -65,47 +68,46 @@ export function UserCard({ user }: UserCardProps) {
   }
 
   return (
-    <div className="bg-surface rounded-lg p-4 flex flex-col gap-3">
+    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <Link href={`/profile/view?username=${user.username}`} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
           {user.profile_picture ? (
             <img
               src={user.profile_picture}
               alt={user.username}
-              className="w-12 h-12 rounded-full object-cover"
+              className="w-12 h-12 rounded-full object-cover border border-neutral-700"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center text-white font-bold border border-neutral-700">
               {user.username.charAt(0).toUpperCase()}
             </div>
           )}
 
           <div>
-            <h3 className="font-semibold">{user.username}</h3>
-            <p className="text-text-secondary text-sm">Voir la collection</p>
+            <h3 className="font-semibold text-white">{user.username}</h3>
+            <p className="text-neutral-400 text-sm">Voir la collection</p>
           </div>
         </Link>
 
         {/* Bouton abonné / s'abonner */}
-        {following !== null && (
-          <button
-            onClick={handleFollowToggle}
-            disabled={loading}
-            className={`px-4 py-2 rounded font-semibold transition border border-primary
-              ${following
-                ? "bg-primary text-white hover:bg-primary/90"
-                : "bg-white text-primary hover:bg-primary/90 hover:text-white"
-              }`}
-          >
-            {loading ? "Chargement..." : following ? "Abonné" : "S'abonner"}
-          </button>
-        )}
+        <button
+          onClick={handleFollowToggle}
+          disabled={loading}
+          className={`px-4 py-2 rounded-lg font-semibold transition text-sm ${followStatus === 'accepted'
+            ? "bg-neutral-800 border border-neutral-600 text-white hover:bg-neutral-700"
+            : followStatus === 'pending'
+              ? "bg-neutral-800 border border-neutral-600 text-neutral-400 hover:bg-neutral-700"
+              : "bg-primary text-primary-foreground hover:bg-primary/90"
+            }`}
+        >
+          {loading ? "..." : followStatus === 'accepted' ? "Abonné" : followStatus === 'pending' ? "Demande envoyée" : isFollowedBy ? "S'abonner en retour" : "S'abonner"}
+        </button>
       </div>
 
       {stats && (
-        <div className="text-sm text-text-secondary flex gap-4">
-          <p><strong>{stats.followers}</strong> followers</p>
-          <p><strong>{stats.following}</strong> following</p>
+        <div className="text-sm text-neutral-400 flex gap-4">
+          <p><strong className="text-white">{stats.followers}</strong> abonnés</p>
+          <p><strong className="text-white">{stats.following}</strong> abonnements</p>
         </div>
       )}
     </div>

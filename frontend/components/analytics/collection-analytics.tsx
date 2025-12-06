@@ -52,17 +52,17 @@ export function CollectionAnalytics({ analytics, loading }: CollectionAnalyticsP
       {/* Key Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((metric) => (
-          <div key={metric.label} className="bg-card rounded-lg p-6 text-center border border-border">
+          <div key={metric.label} className="bg-neutral-900 rounded-lg p-6 text-center border border-neutral-800">
             <div className="text-3xl mb-2">{metric.icon}</div>
-            <p className="text-3xl font-bold text-secondary mb-2">{metric.value}</p>
-            <p className="text-muted-foreground">{metric.label}</p>
+            <p className="text-3xl font-bold text-white mb-2">{metric.value}</p>
+            <p className="text-neutral-400">{metric.label}</p>
           </div>
         ))}
       </div>
 
       {/* Additional Stats */}
       <div className="bg-card rounded-lg p-6 border border-border">
-        <h2 className="text-xl font-bold mb-4 text-foreground">Chronologie de la collection</h2>
+        <h2 className="text-xl font-bold mb-4 text-black dark:text-white">Chronologie de la collection</h2>
         <div className="space-y-3">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Premier vinyle ajouté :</span>

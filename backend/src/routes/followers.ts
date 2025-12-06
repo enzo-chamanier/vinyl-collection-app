@@ -17,21 +17,32 @@ router.post("/follow/:userId", authMiddleware, async (req: AuthRequest, res: Res
     }
 
     const existingFollowRes = await query(
-      "SELECT id FROM follows WHERE follower_id = $1 AND following_id = $2",
+      "SELECT id, status FROM follows WHERE follower_id = $1 AND following_id = $2",
       [followerId, userId]
     );
 
     if (existingFollowRes.rows.length > 0) {
-      return res.status(409).json({ error: "Vous suivez déjà cet utilisateur" });
+      return res.status(409).json({ error: "Vous suivez déjà cet utilisateur ou une demande est en attente" });
     }
+
+    // Check if target user is public
+    const targetUserRes = await query("SELECT is_public FROM users WHERE id = $1", [userId]);
+    if (targetUserRes.rows.length === 0) {
+      return res.status(404).json({ error: "Utilisateur non trouvé" });
+    }
+    const isPublic = targetUserRes.rows[0].is_public;
+    const status = isPublic ? 'accepted' : 'pending';
 
     const followId = uuidv4();
     await query(
-      "INSERT INTO follows (id, follower_id, following_id) VALUES ($1, $2, $3)",
-      [followId, followerId, userId]
+      "INSERT INTO follows (id, follower_id, following_id, status) VALUES ($1, $2, $3, $4)",
+      [followId, followerId, userId, status]
     );
 
-    return res.status(201).json({ message: "Suivi avec succès" });
+    return res.status(201).json({
+      message: status === 'accepted' ? "Suivi avec succès" : "Demande de suivi envoyée",
+      status
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erreur lors du suivi" });
@@ -57,7 +68,7 @@ router.delete("/unfollow/:userId", authMiddleware, async (req: AuthRequest, res:
   }
 });
 
-// --- Get followers ---
+// --- Get followers (only accepted) ---
 router.get("/followers/:userId", async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
@@ -65,7 +76,7 @@ router.get("/followers/:userId", async (req: Request, res: Response) => {
       `SELECT u.id, u.username, u.profile_picture 
         FROM users u
         INNER JOIN follows f ON u.id = f.follower_id
-        WHERE f.following_id = $1`,
+        WHERE f.following_id = $1 AND f.status = 'accepted'`,
       [userId]
     );
     return res.json(followersRes.rows);
@@ -75,7 +86,7 @@ router.get("/followers/:userId", async (req: Request, res: Response) => {
   }
 });
 
-// --- Get following ---
+// --- Get following (only accepted) ---
 router.get("/following/:userId", async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
@@ -84,7 +95,7 @@ router.get("/following/:userId", async (req: Request, res: Response) => {
         FROM users u
         INNER JOIN follows f ON u.id = f.following_id
         LEFT JOIN vinyls v ON u.id = v.user_id
-        WHERE f.follower_id = $1
+        WHERE f.follower_id = $1 AND f.status = 'accepted'
         GROUP BY u.id, u.bio, u.is_public`,
       [userId]
     );
@@ -95,17 +106,17 @@ router.get("/following/:userId", async (req: Request, res: Response) => {
   }
 });
 
-// --- Get followers and following count ---
+// --- Get followers and following count (only accepted) ---
 router.get("/count/:userId", async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
 
     const followersRes = await query(
-      "SELECT COUNT(*) AS count FROM follows WHERE following_id = $1",
+      "SELECT COUNT(*) AS count FROM follows WHERE following_id = $1 AND status = 'accepted'",
       [userId]
     );
     const followingRes = await query(
-      "SELECT COUNT(*) AS count FROM follows WHERE follower_id = $1",
+      "SELECT COUNT(*) AS count FROM follows WHERE follower_id = $1 AND status = 'accepted'",
       [userId]
     );
 
@@ -132,9 +143,7 @@ router.get("/search/:searchQuery", async (req: AuthRequest, res: Response) => {
     const usersRes = await query(
       `SELECT id, username, profile_picture, bio, is_public 
         FROM users 
-        WHERE (username ILIKE $1 OR bio ILIKE $2) 
-          AND is_public = true
-          ${currentUserId ? "AND id != $5" : ""}
+        WHERE (username ILIKE $1 OR bio ILIKE $2) ${currentUserId ? "AND id != $5" : ""}
         LIMIT $3 OFFSET $4`,
       currentUserId
         ? [`%${searchQuery}%`, `%${searchQuery}%`, limit, offset, currentUserId]
@@ -155,11 +164,14 @@ router.get("/feed/recent", authMiddleware, async (req: AuthRequest, res: Respons
     if (!followerId) return res.status(401).json({ error: "Utilisateur non authentifié" });
 
     const feedRes = await query(
-      `SELECT v.*, u.username, u.profile_picture
+      `SELECT v.*, u.username, u.profile_picture,
+        (SELECT COUNT(*) FROM likes WHERE vinyl_id = v.id) AS likes_count,
+        (SELECT COUNT(*) FROM comments WHERE vinyl_id = v.id) AS comments_count,
+        EXISTS(SELECT 1 FROM likes WHERE vinyl_id = v.id AND user_id = $1) AS has_liked
        FROM vinyls v
        INNER JOIN users u ON v.user_id = u.id
        INNER JOIN follows f ON u.id = f.following_id
-       WHERE f.follower_id = $1
+       WHERE f.follower_id = $1 AND f.status = 'accepted'
          AND v.date_added >= NOW() - INTERVAL '7 days'
        ORDER BY v.date_added DESC
        LIMIT 50`,
@@ -181,14 +193,111 @@ router.get("/is-following/:userId", authMiddleware, async (req: AuthRequest, res
     if (!followerId) return res.status(401).json({ error: "Utilisateur non authentifié" });
 
     const existingFollowRes = await query(
-      "SELECT id FROM follows WHERE follower_id = $1 AND following_id = $2",
+      "SELECT status FROM follows WHERE follower_id = $1 AND following_id = $2",
       [followerId, userId]
     );
 
-    return res.json({ isFollowing: existingFollowRes.rows.length > 0 });
+    const isFollowedByRes = await query(
+      "SELECT status FROM follows WHERE follower_id = $1 AND following_id = $2",
+      [userId, followerId]
+    );
+
+    const isFollowedBy = isFollowedByRes.rows.length > 0 && isFollowedByRes.rows[0].status === 'accepted';
+
+    if (existingFollowRes.rows.length > 0) {
+      const status = existingFollowRes.rows[0].status;
+      return res.json({
+        isFollowing: status === 'accepted',
+        isPending: status === 'pending',
+        isFollowedBy,
+        status
+      });
+    }
+
+    return res.json({ isFollowing: false, isPending: false, isFollowedBy, status: null });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erreur lors de la vérification du suivi" });
+  }
+});
+
+// --- Get pending requests ---
+router.get("/requests/pending", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
+
+    const requestsRes = await query(
+      `SELECT u.id, u.username, u.profile_picture 
+       FROM users u
+       INNER JOIN follows f ON u.id = f.follower_id
+       WHERE f.following_id = $1 AND f.status = 'pending'`,
+      [userId]
+    );
+
+    return res.json(requestsRes.rows);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors de la récupération des demandes" });
+  }
+});
+
+// --- Get sent pending requests ---
+router.get("/requests/sent", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
+
+    const requestsRes = await query(
+      `SELECT u.id, u.username, u.profile_picture 
+       FROM users u
+       INNER JOIN follows f ON u.id = f.following_id
+       WHERE f.follower_id = $1 AND f.status = 'pending'`,
+      [userId]
+    );
+
+    return res.json(requestsRes.rows);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors de la récupération des demandes envoyées" });
+  }
+});
+
+// --- Accept follow request ---
+router.post("/accept/:followerId", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { followerId } = req.params;
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
+
+    await query(
+      "UPDATE follows SET status = 'accepted' WHERE follower_id = $1 AND following_id = $2",
+      [followerId, userId]
+    );
+
+    return res.json({ message: "Demande acceptée" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors de l'acceptation de la demande" });
+  }
+});
+
+// --- Reject follow request ---
+router.post("/reject/:followerId", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { followerId } = req.params;
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
+
+    await query(
+      "DELETE FROM follows WHERE follower_id = $1 AND following_id = $2",
+      [followerId, userId]
+    );
+
+    return res.json({ message: "Demande rejetée" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors du rejet de la demande" });
   }
 });
 

@@ -86,6 +86,67 @@ export async function initDatabase() {
             CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id);
         `);
 
+        // Add status column to follows table if it doesn't exist
+        await query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='follows' AND column_name='status') THEN 
+                    ALTER TABLE follows ADD COLUMN status VARCHAR(20) DEFAULT 'accepted'; 
+                END IF; 
+            END $$;
+        `);
+
+        // Likes table
+        await query(`
+            CREATE TABLE IF NOT EXISTS likes (
+                id UUID PRIMARY KEY,
+                user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+                vinyl_id UUID REFERENCES vinyls(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(user_id, vinyl_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_likes_vinyl ON likes(vinyl_id);
+            CREATE INDEX IF NOT EXISTS idx_likes_user ON likes(user_id);
+        `);
+
+        // Add parent_id column to comments if it doesn't exist (migration)
+        await query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='comments' AND column_name='parent_id') THEN 
+                    ALTER TABLE comments ADD COLUMN parent_id UUID REFERENCES comments(id) ON DELETE CASCADE; 
+                END IF; 
+            END $$;
+        `);
+
+        // Comments table
+        await query(`
+            CREATE TABLE IF NOT EXISTS comments (
+                id UUID PRIMARY KEY,
+                user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+                vinyl_id UUID REFERENCES vinyls(id) ON DELETE CASCADE,
+                parent_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            CREATE INDEX IF NOT EXISTS idx_comments_vinyl ON comments(vinyl_id);
+            CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id);
+            CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id);
+        `);
+
+        // Comment Likes table
+        await query(`
+            CREATE TABLE IF NOT EXISTS comment_likes (
+                id UUID PRIMARY KEY,
+                user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+                comment_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(user_id, comment_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_comment_likes_comment ON comment_likes(comment_id);
+            CREATE INDEX IF NOT EXISTS idx_comment_likes_user ON comment_likes(user_id);
+        `);
+
         console.log("✅ Database initialized successfully");
     } catch (error) {
         console.error("❌ Error initializing database:", error);
