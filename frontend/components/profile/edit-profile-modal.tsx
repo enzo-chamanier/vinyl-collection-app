@@ -97,7 +97,7 @@ export function EditProfileModal({ isOpen, onClose, currentUser, onUpdate }: Edi
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={onClose}>
             <div
-                className="bg-background border border-border w-full max-w-md rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                className="bg-background border border-border w-full max-w-md max-h-[90vh] rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -112,7 +112,7 @@ export function EditProfileModal({ isOpen, onClose, currentUser, onUpdate }: Edi
                 </div>
 
                 {/* Body */}
-                <div className="p-6 space-y-6">
+                <div className="p-6 space-y-6 overflow-y-auto flex-1">
                     {error && (
                         <div className="bg-destructive/10 border border-destructive/50 text-destructive px-4 py-3 rounded-lg text-sm">
                             {error}
@@ -165,7 +165,7 @@ export function EditProfileModal({ isOpen, onClose, currentUser, onUpdate }: Edi
 
                         <div className="space-y-3">
                             <label className="text-sm font-medium text-foreground">Visibilité du profil</label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 gap-3">
                                 {/* Public Option */}
                                 <div
                                     onClick={() => setFormData(prev => ({ ...prev, isPublic: true }))}

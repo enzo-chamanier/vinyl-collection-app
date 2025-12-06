@@ -2,7 +2,6 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Disc, Home, ScanLine, Search, User, ArrowUp } from "lucide-react"
-import { NotificationBell } from "@/components/notifications/notification-bell"
 import { api } from "@/lib/api"
 
 export function MobileNav() {
@@ -71,53 +70,41 @@ export function MobileNav() {
     }
 
     return (
-        <>
-            {/* Top Bar for Mobile */}
-            <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-neutral-950/80 backdrop-blur-md border-b border-neutral-800 z-50 flex items-center justify-between px-4">
-                <div className="flex items-center gap-2">
-                    <img src="/logo.png" alt="Discory Logo" className="w-8 h-8 invert" />
-                    <span className="font-bold text-xl text-white">Discory</span>
-                </div>
-                <NotificationBell />
-            </div>
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-neutral-950 border-t border-neutral-800 z-50 pb-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex justify-around items-center h-16">
+                {navItems.map((item) => {
+                    const Icon = item.icon
+                    const active = isActive(item.href)
 
-            {/* Bottom Nav */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-neutral-950 border-t border-neutral-800 z-50 pb-6 animate-in fade-in slide-in-from-bottom-4">
-                <div className="flex justify-around items-center h-16">
-                    {navItems.map((item) => {
-                        const Icon = item.icon
-                        const active = isActive(item.href)
-
-                        if (item.isProfile && profilePicture) {
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${active ? "opacity-100" : "opacity-70 hover:opacity-100"
-                                        }`}
-                                >
-                                    <div className={`w-6 h-6 rounded-full overflow-hidden border-2 ${active ? "border-white" : "border-transparent"}`}>
-                                        <img src={profilePicture} alt="Profil" className="w-full h-full object-cover" />
-                                    </div>
-                                    <span className={`text-[10px] font-medium ${active ? "text-white" : "text-neutral-500"}`}>{item.label}</span>
-                                </Link>
-                            )
-                        }
-
+                    if (item.isProfile && profilePicture) {
                         return (
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${active ? "text-white" : "text-neutral-500 hover:text-white"
+                                className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${active ? "opacity-100" : "opacity-70 hover:opacity-100"
                                     }`}
                             >
-                                <Icon size={24} strokeWidth={active ? 2.5 : 2} />
-                                <span className="text-[10px] font-medium">{item.label}</span>
+                                <div className={`w-6 h-6 rounded-full overflow-hidden border-2 ${active ? "border-white" : "border-transparent"}`}>
+                                    <img src={profilePicture} alt="Profil" className="w-full h-full object-cover" />
+                                </div>
+                                <span className={`text-[10px] font-medium ${active ? "text-white" : "text-neutral-500"}`}>{item.label}</span>
                             </Link>
                         )
-                    })}
-                </div>
-            </nav>
-        </>
+                    }
+
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${active ? "text-white" : "text-neutral-500 hover:text-white"
+                                }`}
+                        >
+                            <Icon size={24} strokeWidth={active ? 2.5 : 2} />
+                            <span className="text-[10px] font-medium">{item.label}</span>
+                        </Link>
+                    )
+                })}
+            </div>
+        </nav>
     )
 }

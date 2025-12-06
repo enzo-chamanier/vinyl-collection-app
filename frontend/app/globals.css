@@ -144,6 +144,8 @@ select:focus {
   @apply bg-muted-foreground;
 }
 
-.app-main {
-  padding-top: 4rem;
+@media (min-width: 768px) {
+  .app-main {
+    padding-top: 4rem;
+  }
 }

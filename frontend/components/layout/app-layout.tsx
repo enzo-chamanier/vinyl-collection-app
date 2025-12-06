@@ -80,6 +80,15 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
       </header>
 
+      {/* Mobile Top Bar - visible only on mobile, scrolls with content */}
+      <div className="md:hidden h-16 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between px-4">
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="Discory Logo" className="w-8 h-8 invert" />
+          <span className="font-bold text-xl text-white">Discory</span>
+        </div>
+        <NotificationBell />
+      </div>
+
       {/* Main Content */}
       <main className="flex-1 bg-background pb-16 md:pb-0 app-main">
         <div className="max-w-7xl mx-auto px-4 py-4">{children}</div>

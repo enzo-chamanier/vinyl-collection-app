@@ -4,6 +4,7 @@ import { VinylCard } from "./vinyl-card"
 import { useState, useMemo, useRef, useEffect } from "react"
 import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 import { api } from "@/lib/api"
+import { SlidersHorizontal } from "lucide-react"
 
 interface Vinyl {
   id: string
@@ -41,6 +42,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
   const [deleting, setDeleting] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined)
   const [currentUsername, setCurrentUsername] = useState<string | undefined>(undefined)
+  const [showFilters, setShowFilters] = useState(false)
   const headerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -49,6 +51,25 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
       setCurrentUserId(user.id)
       setCurrentUsername(user.username)
     }
+    // Default to open on desktop
+    if (window.innerWidth >= 768) {
+      setShowFilters(true)
+    }
+  }, [])
+
+  // Auto-hide filters when scrolling up on mobile
+  useEffect(() => {
+    let lastScrollY = window.scrollY
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      // Hide filters when scrolling up on mobile
+      if (currentScrollY < lastScrollY && window.innerWidth < 768) {
+        setShowFilters(false)
+      }
+      lastScrollY = currentScrollY
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   const toggleSelection = (id: string) => {
@@ -147,15 +168,24 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
 
   return (
     <div>
-      <div ref={headerRef} className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sticky top-0 md:top-16 z-40 bg-background py-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-2xl text-primary font-bold">{title} ({filteredVinyls.length})</h2>
-          {isSelectionMode && (
-            <span className="text-sm text-muted-foreground">{selectedIds.size} sélectionné(s)</span>
-          )}
+      <div ref={headerRef} className="flex flex-col gap-4 mb-6 sticky top-0 md:top-16 z-40 bg-background py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h2 className="text-2xl text-primary font-bold">{title} ({filteredVinyls.length})</h2>
+            {isSelectionMode && (
+              <span className="text-sm text-muted-foreground">{selectedIds.size} sélectionné(s)</span>
+            )}
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition md:hidden"
+            aria-label="Toggle filters"
+          >
+            <SlidersHorizontal className="w-5 h-5" />
+          </button>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className={`${showFilters ? 'flex' : 'hidden'} md:flex flex-col sm:flex-row gap-4`}>
           {isSelectionMode ? (
             <>
               <button

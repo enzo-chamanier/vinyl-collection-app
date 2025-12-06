@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { api } from "@/lib/api"
-import { ArrowLeft, Lock, Loader2 } from "lucide-react"
+import { ArrowLeft, Lock, Loader2, SlidersHorizontal } from "lucide-react"
 import { AppLayout } from "@/components/layout/app-layout"
 import { VinylCard } from "@/components/vinyl/vinyl-card"
 import { FullScreenLoader } from "@/components/ui/full-screen-loader"
@@ -50,6 +50,28 @@ function ProfileContent() {
     const [selectedFormat, setSelectedFormat] = useState<"all" | "vinyl" | "cd">("all")
     const [groupByArtist, setGroupByArtist] = useState(false)
     const [activeTab, setActiveTab] = useState<"collection" | "gifted_to" | "gifted_by">("collection")
+    const [showFilters, setShowFilters] = useState(false)
+
+    useEffect(() => {
+        if (window.innerWidth >= 768) {
+            setShowFilters(true)
+        }
+    }, [])
+
+    // Auto-hide filters when scrolling up on mobile
+    useEffect(() => {
+        let lastScrollY = window.scrollY
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY
+            // Hide filters when scrolling up on mobile
+            if (currentScrollY < lastScrollY && window.innerWidth < 768) {
+                setShowFilters(false)
+            }
+            lastScrollY = currentScrollY
+        }
+        window.addEventListener('scroll', handleScroll, { passive: true })
+        return () => window.removeEventListener('scroll', handleScroll)
+    }, [])
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem("user") || "{}")
@@ -284,29 +306,38 @@ function ProfileContent() {
                         </div>
                     ) : (
                         <div>
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                                <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
+                            <div className="flex flex-col gap-4 mb-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+                                        <button
+                                            onClick={() => setActiveTab("collection")}
+                                            className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "collection" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+                                        >
+                                            Collection
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab("gifted_to")}
+                                            className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_to" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+                                        >
+                                            Reçus 🎁
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab("gifted_by")}
+                                            className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_by" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+                                        >
+                                            Offerts 💝
+                                        </button>
+                                    </div>
                                     <button
-                                        onClick={() => setActiveTab("collection")}
-                                        className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "collection" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
+                                        onClick={() => setShowFilters(!showFilters)}
+                                        className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition md:hidden shrink-0"
+                                        aria-label="Toggle filters"
                                     >
-                                        Collection
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab("gifted_to")}
-                                        className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_to" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
-                                    >
-                                        Reçus 🎁
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab("gifted_by")}
-                                        className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${activeTab === "gifted_by" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}
-                                    >
-                                        Offerts 💝
+                                        <SlidersHorizontal className="w-5 h-5" />
                                     </button>
                                 </div>
 
-                                <div className="flex flex-col sm:flex-row gap-4">
+                                <div className={`${showFilters ? 'flex' : 'hidden'} md:flex flex-col sm:flex-row gap-4`}>
                                     <input
                                         type="text"
                                         placeholder="Rechercher un vinyle..."
