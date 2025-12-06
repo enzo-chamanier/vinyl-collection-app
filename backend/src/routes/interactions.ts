@@ -56,7 +56,7 @@ router.post("/likes/:vinylId", authMiddleware, async (req: AuthRequest, res: Res
                     const payload = JSON.stringify({
                         title: "Nouveau like !",
                         body: `${senderName} a aimé votre vinyle "${vinylTitle}".`,
-                        url: `/vinyl/${vinylId}`
+                        url: `/vinyl?id=${vinylId}`
                     });
 
                     for (const sub of subscriptions.rows) {
@@ -72,7 +72,7 @@ router.post("/likes/:vinylId", authMiddleware, async (req: AuthRequest, res: Res
                         req.io.to(`user_${ownerId}`).emit("notification", {
                             title: "Nouveau like !",
                             body: `${senderName} a aimé votre vinyle "${vinylTitle}".`,
-                            url: `/vinyl/${vinylId}`
+                            url: `/vinyl?id=${vinylId}`
                         });
                     }
                 }
@@ -144,7 +144,7 @@ router.post("/comments/:vinylId", authMiddleware, async (req: AuthRequest, res: 
             if (ownerId !== userId) {
                 await query(
                     "INSERT INTO notifications (id, recipient_id, sender_id, type, reference_id) VALUES ($1, $2, $3, $4, $5)",
-                    [uuidv4(), ownerId, userId, "VINYL_COMMENT", vinylId]
+                    [uuidv4(), ownerId, userId, "VINYL_COMMENT", commentId]
                 );
 
                 // Send Push Notification
@@ -155,7 +155,7 @@ router.post("/comments/:vinylId", authMiddleware, async (req: AuthRequest, res: 
                 const payload = JSON.stringify({
                     title: "Nouveau commentaire !",
                     body: `${senderName} a commenté votre vinyle.`,
-                    url: `/vinyl/${vinylId}`
+                    url: `/vinyl?id=${vinylId}&commentId=${commentId}`
                 });
 
                 for (const sub of subscriptions.rows) {
@@ -171,7 +171,7 @@ router.post("/comments/:vinylId", authMiddleware, async (req: AuthRequest, res: 
                     req.io.to(`user_${ownerId}`).emit("notification", {
                         title: "Nouveau commentaire !",
                         body: `${senderName} a commenté votre vinyle.`,
-                        url: `/vinyl/${vinylId}`
+                        url: `/vinyl?id=${vinylId}&commentId=${commentId}`
                     });
                 }
             }
@@ -260,7 +260,7 @@ router.post("/comments/:commentId/like", authMiddleware, async (req: AuthRequest
                     const pushPayload = JSON.stringify({
                         title: "Nouveau like !",
                         body: `${senderName} a aimé votre commentaire.`,
-                        url: vinylId ? `/vinyl/${vinylId}` : "/"
+                        url: vinylId ? `/vinyl?id=${vinylId}` : "/"
                     });
 
                     for (const sub of subscriptions.rows) {
@@ -277,7 +277,7 @@ router.post("/comments/:commentId/like", authMiddleware, async (req: AuthRequest
                         req.io.to(`user_${authorId}`).emit("notification", {
                             title: "Nouveau like !",
                             body: `${senderName} a aimé votre commentaire.`,
-                            url: vinylId ? `/vinyl/${vinylId}` : "/"
+                            url: vinylId ? `/vinyl?id=${vinylId}` : "/"
                         });
                     }
                 }

@@ -16,6 +16,7 @@ interface Notification {
     sender_id: string
     is_following_back: boolean
     has_accepted_request: boolean
+    vinyl_id?: string // For VINYL_COMMENT notifications
     // Local state for UI
     isAccepted?: boolean
     isFollowingBack?: boolean
@@ -87,8 +88,18 @@ export default function NotificationsPage() {
                 )
             }
 
-            if (notification.type === "VINYL_COMMENT" || notification.type === "VINYL_LIKE") {
-                router.push(`/vinyl/${notification.reference_id}`)
+            if (notification.type === "VINYL_COMMENT") {
+                // For new notifications: reference_id = commentId, vinyl_id from LEFT JOIN
+                // For old notifications: reference_id = vinylId, vinyl_id is NULL
+                if (notification.vinyl_id) {
+                    // New notification format - scroll to specific comment
+                    router.push(`/vinyl?id=${notification.vinyl_id}&commentId=${notification.reference_id}`)
+                } else {
+                    // Old notification format - just go to vinyl (reference_id is vinylId)
+                    router.push(`/vinyl?id=${notification.reference_id}`)
+                }
+            } else if (notification.type === "VINYL_LIKE") {
+                router.push(`/vinyl?id=${notification.reference_id}`)
             } else if (notification.type === "NEW_FOLLOWER" || notification.type === "FOLLOW_ACCEPTED") {
                 router.push(`/profile/view?username=${notification.sender_username}`)
             } else if (notification.type === "FOLLOW_REQUEST") {

@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
 import { VinylColorPicker, type VinylColorData, getVinylBackground } from "./vinyl-color-picker"
 import { AlertCircle, CheckCircle } from "lucide-react"
@@ -35,6 +36,7 @@ interface VinylCardProps {
   readOnly?: boolean
   currentUserId?: string
   currentUsername?: string
+  linkToDetail?: boolean
 }
 
 export function VinylCard({
@@ -45,8 +47,10 @@ export function VinylCard({
   onSelect,
   readOnly = false,
   currentUsername,
-  currentUserId
+  currentUserId,
+  linkToDetail = false
 }: VinylCardProps) {
+  const router = useRouter()
   const [showDelete, setShowDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showColorPicker, setShowColorPicker] = useState(false)
@@ -124,7 +128,10 @@ export function VinylCard({
       <div
         className="group relative"
         onClick={() => {
-          if (!selectable && !readOnly) {
+          if (selectable) return
+          if (linkToDetail) {
+            router.push(`/vinyl?id=${vinyl.id}`)
+          } else if (!readOnly) {
             setShowCommentsModal(true)
           }
         }}

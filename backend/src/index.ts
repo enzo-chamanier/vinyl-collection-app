@@ -12,6 +12,7 @@ import scanRouter from "./routes/scan";
 import analyticsRouter from "./routes/analytics";
 import interactionsRouter from "./routes/interactions";
 import notificationsRouter from "./routes/notifications";
+import musicRouter from "./routes/music";
 import { errorHandler } from "./middleware/errorHandler";
 import { initDatabase } from "./config/initDatabase";
 import { authMiddleware } from "./middleware/auth";
@@ -64,6 +65,7 @@ app.use("/api/scan", authMiddleware, scanRouter);
 app.use("/api/analytics", authMiddleware, analyticsRouter);
 app.use("/api/interactions", authMiddleware, interactionsRouter);
 app.use("/api/notifications", authMiddleware, notificationsRouter);
+app.use("/api/music", authMiddleware, musicRouter);
 
 // Error handling
 app.use(errorHandler);

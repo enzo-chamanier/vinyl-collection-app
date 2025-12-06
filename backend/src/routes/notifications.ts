@@ -20,9 +20,11 @@ router.get("/", authMiddleware, async (req: AuthRequest, res: Response) => {
                     EXISTS(
                         SELECT 1 FROM follows f 
                         WHERE f.follower_id = n.sender_id AND f.following_id = $1 AND f.status = 'accepted'
-                    ) as has_accepted_request
+                    ) as has_accepted_request,
+                    CASE WHEN n.type = 'VINYL_COMMENT' THEN c.vinyl_id ELSE NULL END as vinyl_id
              FROM notifications n
              JOIN users u ON n.sender_id = u.id
+             LEFT JOIN comments c ON n.type = 'VINYL_COMMENT' AND n.reference_id = c.id
              WHERE n.recipient_id = $1
              ORDER BY n.created_at DESC
              LIMIT 50`,

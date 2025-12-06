@@ -28,6 +28,39 @@ router.get("/my-collection", authMiddleware, async (req: AuthRequest, res: Respo
   }
 });
 
+// --- Get single vinyl by ID ---
+router.get("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await query(
+      `SELECT v.*, 
+              u_owner.id as owner_id,
+              u_owner.username as owner_username,
+              u_owner.profile_picture as owner_profile_picture,
+              u_gift.username as gifted_by_username, 
+              u_share.username as shared_with_username,
+              (SELECT COUNT(*)::int FROM likes WHERE vinyl_id = v.id) as likes_count,
+              (SELECT COUNT(*)::int FROM comments WHERE vinyl_id = v.id) as comments_count,
+              EXISTS(SELECT 1 FROM likes WHERE vinyl_id = v.id AND user_id = $2) as has_liked
+       FROM vinyls v
+       JOIN users u_owner ON v.user_id = u_owner.id
+       LEFT JOIN users u_gift ON v.gifted_by_user_id = u_gift.id
+       LEFT JOIN users u_share ON v.shared_with_user_id = u_share.id
+       WHERE v.id = $1`,
+      [id, req.user?.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Vinyle non trouvé" });
+    }
+
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors de la récupération du vinyle" });
+  }
+});
+
 // --- Add vinyl ---
 router.post("/add", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {

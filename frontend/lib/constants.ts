@@ -1,10 +1,14 @@
 export const GENRES = [
   "Rock",
   "Pop",
+  "K-Pop",
+  "J-Pop",
   "Jazz",
   "Hip Hop",
-  "Electronic",
-  "Classical",
+  "Rap",
+  "R&B",
+  "Electronique",
+  "Classique",
   "Soul",
   "Blues",
   "Country",
@@ -12,12 +16,12 @@ export const GENRES = [
   "Reggae",
   "Latin",
   "Indie",
-  "Alternative",
+  "Alternatif",
   "Punk",
   "Metal",
-  "Other",
+  "Autre",
 ] as const
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL 
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
 export const VINYL_PLACEHOLDER = "/vinyl-record-cover.jpg"

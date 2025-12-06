@@ -280,6 +280,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
                       currentUserId={currentUserId}
                       currentUsername={currentUsername}
                       readOnly={currentUserId && vinyl.user_id ? vinyl.user_id !== currentUserId : false}
+                      linkToDetail={true}
                     />
                   ))}
                 </div>
@@ -299,6 +300,7 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
                 currentUserId={currentUserId}
                 currentUsername={currentUsername}
                 readOnly={currentUserId && vinyl.user_id ? vinyl.user_id !== currentUserId : false}
+                linkToDetail={true}
               />
             ))}
           </div>

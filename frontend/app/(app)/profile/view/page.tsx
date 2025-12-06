@@ -382,6 +382,7 @@ function ProfileContent() {
                                                         readOnly={!isOwner || activeTab === "gifted_by"}
                                                         currentUserId={currentUser?.id}
                                                         currentUsername={currentUser?.username}
+                                                        linkToDetail={true}
                                                     />
                                                 ))}
                                             </div>
@@ -398,6 +399,7 @@ function ProfileContent() {
                                             readOnly={!isOwner || activeTab === "gifted_by"}
                                             currentUserId={currentUser?.id}
                                             currentUsername={currentUser?.username}
+                                            linkToDetail={true}
                                         />
                                     ))}
                                 </div>
