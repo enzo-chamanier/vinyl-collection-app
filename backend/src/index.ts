@@ -23,12 +23,16 @@ const app: Express = express();
 const PORT = process.env.PORT || 5000;
 
 const httpServer = createServer(app);
+const allowedOrigins = [
+  "http://localhost:3000",
+  /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:3000$/, // Allow local network IPs
+  "https://discory-fr.netlify.app", // Production Frontend
+  process.env.FRONTEND_URL // Allow env variable override
+].filter(Boolean) as (string | RegExp)[];
+
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      "http://localhost:3000",
-      /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:3000$/ // Allow local network IPs
-    ],
+    origin: allowedOrigins,
     credentials: true,
   },
 });
@@ -38,10 +42,7 @@ console.log("Socket.io initialized");
 // Middleware
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:3000$/ // Allow local network IPs
-    ],
+    origin: allowedOrigins,
     credentials: true,
   })
 );
