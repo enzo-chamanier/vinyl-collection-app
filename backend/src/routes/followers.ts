@@ -225,7 +225,7 @@ router.get("/count/:userId", async (req: Request, res: Response) => {
 router.get("/search/:searchQuery", async (req: AuthRequest, res: Response) => {
   try {
     const { searchQuery } = req.params;
-    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
     const offset = parseInt(req.query.offset as string) || 0;
 
     // Récupère l'id de l'utilisateur courant depuis req.user
@@ -254,7 +254,7 @@ router.get("/feed/recent", authMiddleware, async (req: AuthRequest, res: Respons
     const followerId = req.user?.userId;
     if (!followerId) return res.status(401).json({ error: "Utilisateur non authentifié" });
 
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = parseInt(req.query.limit as string) || 10;
     const offset = parseInt(req.query.offset as string) || 0;
 
     // Get total count

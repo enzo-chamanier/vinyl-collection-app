@@ -53,7 +53,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     const [audioUnlocked, setAudioUnlocked] = useState(false)
     const [showHeartAnimation, setShowHeartAnimation] = useState(false)
     const [commentsFullscreen, setCommentsFullscreen] = useState(false)
-    const [wasPlayingBeforeComments, setWasPlayingBeforeComments] = useState(false)
+    const wasPlayingRef = useRef(false)
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const touchStartY = useRef(0)
@@ -94,9 +94,10 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         setAudioUrl(null)
 
         try {
-            // Clean artist name (remove parentheses content)
+            // Clean artist and title (remove parentheses content)
             const cleanArtist = artist.replace(/\s*\([^)]*\)/g, "").trim()
-            const query = `${cleanArtist} ${title}`
+            const cleanTitle = title.replace(/\s*\([^)]*\)/g, "").trim()
+            const query = `${cleanArtist} ${cleanTitle}`
 
             // Use our backend proxy to avoid CORS
             const data = await api.get(`/music/search?q=${encodeURIComponent(query)}`)
@@ -188,7 +189,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     // Keyboard navigation
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (showComments || !audioUnlocked) return
+            if (showComments) return
 
             if (e.key === "ArrowDown" || e.key === "j") {
                 e.preventDefault()
@@ -206,16 +207,14 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
 
         window.addEventListener("keydown", handleKeyDown)
         return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [currentIndex, goToSlide, showComments, audioUnlocked])
+    }, [currentIndex, goToSlide, showComments])
 
     // Touch/swipe navigation
     const handleTouchStart = (e: React.TouchEvent) => {
-        if (!audioUnlocked) return
         touchStartY.current = e.touches[0].clientY
     }
 
     const handleTouchEnd = (e: React.TouchEvent) => {
-        if (!audioUnlocked) return
         const touchEndY = e.changedTouches[0].clientY
         const diff = touchStartY.current - touchEndY
 
@@ -230,7 +229,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
 
     // Wheel navigation
     const handleWheel = useCallback((e: WheelEvent) => {
-        if (showComments || !audioUnlocked) return
+        if (showComments) return
 
         e.preventDefault()
         if (e.deltaY > 50) {
@@ -238,7 +237,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         } else if (e.deltaY < -50) {
             goToSlide(currentIndex - 1, 'down')
         }
-    }, [currentIndex, goToSlide, showComments, audioUnlocked])
+    }, [currentIndex, goToSlide, showComments])
 
     useEffect(() => {
         const container = containerRef.current
@@ -300,27 +299,27 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     // Close comments - resume audio if was playing before fullscreen
     const closeComments = useCallback(() => {
         setShowComments(false)
-        if (commentsFullscreen && wasPlayingBeforeComments) {
+        if (commentsFullscreen && wasPlayingRef.current) {
             setIsPlaying(true)
         }
         setCommentsFullscreen(false)
-    }, [commentsFullscreen, wasPlayingBeforeComments])
+    }, [commentsFullscreen])
 
     // Toggle fullscreen - pause/resume audio accordingly
     const toggleCommentsFullscreen = useCallback(() => {
         if (!commentsFullscreen) {
             // Going fullscreen - save state and pause
-            setWasPlayingBeforeComments(isPlaying)
+            wasPlayingRef.current = isPlaying
             setIsPlaying(false)
             setCommentsFullscreen(true)
         } else {
             // Leaving fullscreen - resume if was playing
-            if (wasPlayingBeforeComments) {
+            if (wasPlayingRef.current) {
                 setIsPlaying(true)
             }
             setCommentsFullscreen(false)
         }
-    }, [commentsFullscreen, isPlaying, wasPlayingBeforeComments])
+    }, [commentsFullscreen, isPlaying])
 
     // Handle drag on comments modal
     const handleCommentsDragStart = (e: React.TouchEvent) => {
@@ -389,16 +388,18 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             <audio ref={audioRef} loop />
 
             {/* Audio unlock overlay */}
-            {!audioUnlocked && audioUrl && (
+            {!audioUnlocked && (
                 <div
                     className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer"
                     onClick={unlockAudio}
                 >
                     <div className="text-center animate-pulse">
                         <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-4">
-                            <Volume2 size={40} className="text-white" />
+                            {audioUrl ? <Volume2 size={40} className="text-white" /> : <Play size={40} className="text-white" />}
                         </div>
-                        <p className="text-white text-lg font-medium">Appuyez pour activer le son</p>
+                        <p className="text-white text-lg font-medium">
+                            {audioUrl ? "Appuyez pour activer le son" : "Appuyez pour commencer"}
+                        </p>
                     </div>
                 </div>
             )}
@@ -525,8 +526,8 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                                 }`}>
                                 {currentItem.format === 'cd' ? '💿 CD' : '🎵 Vinyle'}
                             </span>
-                            {discCount > 1 && (
-                                <span className="text-white/50 text-xs">{discCount} disques</span>
+                            {discCount && (
+                                <span className="text-white/50 text-xs">{discCount} disque{discCount > 1 ? 's' : ''}</span>
                             )}
                             {currentItem.disc_name && (
                                 <span className="text-white/40 text-xs italic">"{currentItem.disc_name}"</span>
@@ -540,23 +541,30 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                             ) : audioUrl ? (
                                 <>
                                     <button
-                                        onClick={() => setIsPlaying(!isPlaying)}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setIsPlaying(!isPlaying)
+                                        }}
                                         className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
                                     >
                                         {isPlaying ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
                                     </button>
                                     <button
-                                        onClick={() => setIsMuted(!isMuted)}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setIsMuted(!isMuted)
+                                        }}
                                         className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
                                     >
                                         {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                                     </button>
-                                    {discCount && (
-                                        <span className="text-white/50 text-xs">{discCount}xLP</span>
-                                    )}
+
                                 </>
                             ) : (
-                                <span className="text-white/40 text-xs">Aperçu non disponible</span>
+                                <div className="flex items-center gap-2 text-white/50 bg-white/10 px-3 py-1.5 rounded-full">
+                                    <VolumeX size={14} />
+                                    <span className="text-xs font-medium">Pas d'extrait audio</span>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -565,7 +573,10 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                     <div className="flex flex-col items-center gap-4">
                         {/* Like */}
                         <button
-                            onClick={() => handleLike(currentItem.id)}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                handleLike(currentItem.id)
+                            }}
                             className="flex flex-col items-center"
                         >
                             <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${likedItems[currentItem.id] ? 'bg-red-500' : 'bg-white/20'}`}>
@@ -580,7 +591,10 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
 
                         {/* Comments */}
                         <button
-                            onClick={openComments}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                openComments()
+                            }}
                             className="flex flex-col items-center"
                         >
                             <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center">
@@ -608,8 +622,8 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                         onClick={closeComments}
                     >
                         <div
-                            className={`bg-neutral-900 w-full max-w-lg flex flex-col mx-2 transition-all duration-300 ${commentsFullscreen
-                                ? 'h-full rounded-none mx-0'
+                            className={`bg-neutral-900 w-full max-w-lg flex flex-col transition-all duration-300 ${commentsFullscreen
+                                ? 'h-[calc(100%-64px)] mt-16 rounded-t-2xl mx-0 pb-8'
                                 : 'h-[65%] rounded-3xl'
                                 }`}
                             style={{ animation: 'slideUp 0.3s ease-out' }}
@@ -653,6 +667,6 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                     </div>
                 )
             }
-        </div >
+        </div>
     )
 }

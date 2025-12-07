@@ -177,11 +177,6 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
           <div className="flex items-center gap-4">
             <h2 className="text-2xl text-primary font-bold">
               {title} ({totalCount ?? filteredVinyls.length})
-              {totalCount && filteredVinyls.length !== totalCount && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  ({filteredVinyls.length} affichés)
-                </span>
-              )}
             </h2>
             {isSelectionMode && (
               <span className="text-sm text-muted-foreground">{selectedIds.size} sélectionné(s)</span>

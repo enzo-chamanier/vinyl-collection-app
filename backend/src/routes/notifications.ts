@@ -10,7 +10,7 @@ router.get("/", authMiddleware, async (req: AuthRequest, res: Response) => {
         const userId = req.user?.userId;
         if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
 
-        const limit = parseInt(req.query.limit as string) || 20;
+        const limit = parseInt(req.query.limit as string) || 10;
         const offset = parseInt(req.query.offset as string) || 0;
 
         // Get total count

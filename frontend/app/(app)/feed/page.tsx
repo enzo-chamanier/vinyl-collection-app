@@ -29,7 +29,7 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true)
   const [hasMore, setHasMore] = useState(true)
   const [offset, setOffset] = useState(0)
-  const LIMIT = 20
+  const LIMIT = 10
 
   const loadFeed = useCallback(async (isInitial = false) => {
     try {

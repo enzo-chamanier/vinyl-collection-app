@@ -36,6 +36,8 @@ export default function NotificationsPage() {
     const router = useRouter()
     const LIMIT = 20
 
+    const [filter, setFilter] = useState<'all' | 'follows' | 'likes' | 'comments'>('all')
+
     const fetchNotifications = useCallback(async (isInitial = false) => {
         try {
             if (isInitial) {
@@ -227,6 +229,14 @@ export default function NotificationsPage() {
         }
     }
 
+    const filteredNotifications = notifications.filter(n => {
+        if (filter === 'all') return true
+        if (filter === 'follows') return ['FOLLOW_REQUEST', 'NEW_FOLLOWER', 'FOLLOW_ACCEPTED'].includes(n.type)
+        if (filter === 'likes') return ['VINYL_LIKE', 'COMMENT_LIKE'].includes(n.type)
+        if (filter === 'comments') return ['VINYL_COMMENT'].includes(n.type)
+        return true
+    })
+
     return (
         <div className="min-h-screen bg-background text-white">
             <div className="max-w-2xl mx-auto">
@@ -240,6 +250,39 @@ export default function NotificationsPage() {
                         </button>
                         <h1 className="text-2xl font-bold">Notifications</h1>
                     </div>
+
+                    {/* Filters */}
+                    <div className="flex gap-2 mb-4 flex-wrap">
+                        <button
+                            onClick={() => setFilter('all')}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${filter === 'all' ? 'bg-white text-black' : 'bg-neutral-800 text-white hover:bg-neutral-700'
+                                }`}
+                        >
+                            Tout
+                        </button>
+                        <button
+                            onClick={() => setFilter('follows')}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${filter === 'follows' ? 'bg-white text-black' : 'bg-neutral-800 text-white hover:bg-neutral-700'
+                                }`}
+                        >
+                            Abonnements
+                        </button>
+                        <button
+                            onClick={() => setFilter('likes')}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${filter === 'likes' ? 'bg-white text-black' : 'bg-neutral-800 text-white hover:bg-neutral-700'
+                                }`}
+                        >
+                            J'aime
+                        </button>
+                        <button
+                            onClick={() => setFilter('comments')}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${filter === 'comments' ? 'bg-white text-black' : 'bg-neutral-800 text-white hover:bg-neutral-700'
+                                }`}
+                        >
+                            Commentaires
+                        </button>
+                    </div>
+
                     <div className="flex gap-2 pl-2 flex-wrap">
                         {!pushSupported ? (
                             <div className="text-sm text-neutral-500 flex items-center gap-2">
@@ -281,13 +324,14 @@ export default function NotificationsPage() {
                         <div className="flex justify-center py-12">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         </div>
-                    ) : notifications.length === 0 ? (
-                        <div className="text-center py-12 text-neutral-500">
-                            Aucune notification pour le moment
-                        </div>
                     ) : (
                         <div className="space-y-2">
-                            {notifications.map((notification) => (
+                            {filteredNotifications.length === 0 && (
+                                <div className="text-center py-12 text-neutral-500">
+                                    {filter === 'all' ? 'Aucune notification pour le moment' : 'Aucune notification dans cette catégorie'}
+                                </div>
+                            )}
+                            {filteredNotifications.map((notification) => (
                                 <div
                                     key={notification.id}
                                     onClick={() => handleNotificationClick(notification)}

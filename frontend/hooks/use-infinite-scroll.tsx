@@ -19,7 +19,7 @@ interface UseInfiniteScrollReturn<T> {
 
 export function useInfiniteScroll<T>({
     fetchFn,
-    limit = 20,
+    limit = 10,
     initialLoad = true,
 }: UseInfiniteScrollOptions<T>): UseInfiniteScrollReturn<T> {
     const [data, setData] = useState<T[]>([])
