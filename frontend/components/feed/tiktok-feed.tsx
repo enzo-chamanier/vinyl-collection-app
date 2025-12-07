@@ -132,12 +132,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         }
     }, [currentIndex, items, fetchAudioPreview])
 
-    // Set audio source when URL changes
-    useEffect(() => {
-        if (audioRef.current && audioUrl) {
-            audioRef.current.src = audioUrl
-        }
-    }, [audioUrl])
+
 
     // Play/pause audio (without changing source)
     useEffect(() => {
@@ -157,21 +152,26 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         if (!audioUnlocked && audioRef.current && !audioLoading) {
             setAudioUnlocked(true)
             if (audioUrl) {
+                // Set src and play immediately within the user interaction event
                 audioRef.current.src = audioUrl
-                audioRef.current.play().catch(() => { })
+                audioRef.current.play().catch((e) => console.error("Unlock play failed:", e))
                 setIsPlaying(true)
             }
         }
     }, [audioUnlocked, audioUrl, audioLoading])
 
-    // Auto-play when audio loads (only if already unlocked)
+    // Auto-play when audio loads (only if already unlocked and track changes)
     useEffect(() => {
         if (audioUrl && !isMuted && audioRef.current && audioUnlocked) {
-            setIsPlaying(true)
-            audioRef.current.src = audioUrl
-            audioRef.current.play().catch(() => { })
+            // Only play if the src is different (new track)
+            // We compare the end of the src because the browser might resolve it to a full URL
+            if (!audioRef.current.src.endsWith(audioUrl)) {
+                setIsPlaying(true)
+                audioRef.current.src = audioUrl
+                audioRef.current.play().catch(() => { })
+            }
         }
-    }, [audioUrl, audioUnlocked]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [audioUrl, audioUnlocked, isMuted])
 
     // Navigate to slide
     const goToSlide = useCallback((index: number, direction?: 'up' | 'down') => {
