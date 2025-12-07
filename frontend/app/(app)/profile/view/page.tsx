@@ -3,9 +3,9 @@
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { api } from "@/lib/api"
-import { ArrowLeft, Lock, Loader2, SlidersHorizontal } from "lucide-react"
+import { ArrowLeft, Lock, Loader2 } from "lucide-react"
 import { AppLayout } from "@/components/layout/app-layout"
-import { VinylCard } from "@/components/vinyl/vinyl-card"
+import { VinylCollection } from "@/components/vinyl/vinyl-collection"
 import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 
 interface Vinyl {
@@ -46,32 +46,16 @@ function ProfileContent() {
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [loadingFollow, setLoadingFollow] = useState(false)
 
-    const [searchQuery, setSearchQuery] = useState("")
-    const [selectedFormat, setSelectedFormat] = useState<"all" | "vinyl" | "cd">("all")
-    const [groupByArtist, setGroupByArtist] = useState(false)
+    // Vinyl pagination state for main collection
+    const [vinyls, setVinyls] = useState<Vinyl[]>([])
+    const [loadingVinyls, setLoadingVinyls] = useState(false)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
+    const [offset, setOffset] = useState(0)
+    const [totalCount, setTotalCount] = useState(0)
+    const LIMIT = 10
+
     const [activeTab, setActiveTab] = useState<"collection" | "gifted_to" | "gifted_by">("collection")
-    const [showFilters, setShowFilters] = useState(false)
-
-    useEffect(() => {
-        if (window.innerWidth >= 768) {
-            setShowFilters(true)
-        }
-    }, [])
-
-    // Auto-hide filters when scrolling up on mobile
-    useEffect(() => {
-        let lastScrollY = window.scrollY
-        const handleScroll = () => {
-            const currentScrollY = window.scrollY
-            // Hide filters when scrolling up on mobile
-            if (currentScrollY < lastScrollY && window.innerWidth < 768) {
-                setShowFilters(false)
-            }
-            lastScrollY = currentScrollY
-        }
-        window.addEventListener('scroll', handleScroll, { passive: true })
-        return () => window.removeEventListener('scroll', handleScroll)
-    }, [])
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem("user") || "{}")
@@ -114,7 +98,8 @@ function ProfileContent() {
             // Construct profile object matching the interface
             const profileData: Profile = {
                 ...data.user,
-                vinyls: data.vinyls,
+                // We don't use data.vinyls for the main collection anymore, but we keep it for reference or initial load if needed
+                // giftedVinyls are still used for "gifted_by" (gifted TO others)
                 giftedVinyls: data.giftedVinyls,
                 stats: data.stats,
                 is_following: isFollowing,
@@ -122,18 +107,66 @@ function ProfileContent() {
                 is_followed_by: isFollowedBy,
                 followersCount,
                 followingCount,
-                // Ensure legacy fields mapping if needed
                 profile_picture: data.user.profilePicture,
                 is_private: !data.user.isPublic,
                 profileCategory: data.user.profileCategory
             }
 
             setProfile(profileData)
+
+            // Fetch vinyls if we can view them
+            const isOwner = currentUser?.id === userId
+            const canView = data.user.isPublic || isOwner || (isFollowing && !isPending)
+
+            if (canView) {
+                fetchVinyls(userId, true)
+            }
+
         } catch (err: any) {
             console.error("Error loading profile:", err)
             setError("Impossible de charger le profil.")
         } finally {
             setLoading(false)
+        }
+    }
+
+    const fetchVinyls = async (userId: string, isInitial = false) => {
+        try {
+            if (isInitial) {
+                setLoadingVinyls(true)
+                setOffset(0)
+            } else {
+                setLoadingMore(true)
+            }
+
+            const currentOffset = isInitial ? 0 : offset
+            const result = await api.get(`/vinyls/user/${userId}?limit=${LIMIT}&offset=${currentOffset}`)
+
+            if (isInitial) {
+                setVinyls(result.data)
+            } else {
+                setVinyls(prev => {
+                    const existingIds = new Set(prev.map(v => v.id))
+                    const newVinyls = result.data.filter((v: Vinyl) => !existingIds.has(v.id))
+                    return [...prev, ...newVinyls]
+                })
+            }
+
+            setHasMore(result.hasMore)
+            setTotalCount(result.total)
+            setOffset(currentOffset + result.data.length)
+        } catch (error) {
+            console.error("Failed to fetch vinyls", error)
+            // If error is 403 (private), it's handled by UI
+        } finally {
+            setLoadingVinyls(false)
+            setLoadingMore(false)
+        }
+    }
+
+    const loadMore = () => {
+        if (!loadingMore && hasMore && profile) {
+            fetchVinyls(profile.id, false)
         }
     }
 
@@ -147,39 +180,6 @@ function ProfileContent() {
     }, [username])
 
     const isOwner = currentUser?.id === profile?.id
-
-    const getDisplayedVinyls = () => {
-        if (!profile) return []
-        if (activeTab === "gifted_to") {
-            return profile.vinyls?.filter((v: any) => v.gifted_by_user_id) || []
-        }
-        if (activeTab === "gifted_by") {
-            return profile.giftedVinyls || []
-        }
-        return profile.vinyls || []
-    }
-
-    const displayedVinyls = getDisplayedVinyls()
-
-    const filteredVinyls = displayedVinyls.filter((vinyl: any) => {
-        const query = searchQuery.toLowerCase()
-        const matchesSearch = (
-            vinyl.title.toLowerCase().includes(query) ||
-            (vinyl.artist && vinyl.artist.toLowerCase().includes(query)) ||
-            (vinyl.genre && vinyl.genre.toLowerCase().includes(query))
-        )
-        const matchesFormat = selectedFormat === "all" || (vinyl.format || "vinyl") === selectedFormat
-
-        return matchesSearch && matchesFormat
-    })
-
-    const vinylsByArtist = filteredVinyls.reduce((acc: any, vinyl: any) => {
-        const artist = vinyl.artist ? vinyl.artist.replace(/\s*\([^)]*\)/g, "") : "Inconnu"
-        if (!acc[artist]) acc[artist] = []
-        acc[artist].push(vinyl)
-        return acc
-    }, {})
-
     const isPrivate = profile?.is_private && !profile?.is_following && !isOwner
 
     const handleFollowToggle = async () => {
@@ -202,6 +202,11 @@ function ProfileContent() {
                     is_pending: res.status === 'pending',
                     followersCount: res.status === 'accepted' ? (prev.followersCount || 0) + 1 : prev.followersCount
                 } : null)
+
+                // If accepted immediately, fetch vinyls
+                if (res.status === 'accepted') {
+                    fetchVinyls(profile.id, true)
+                }
             }
         } catch (error) {
             console.error("Error toggling follow:", error)
@@ -209,6 +214,31 @@ function ProfileContent() {
             setLoadingFollow(false)
         }
     }
+
+    // Determine which vinyls to show based on active tab
+    const getTabVinyls = () => {
+        if (!profile) return []
+        if (activeTab === "gifted_to") {
+            // "Reçus": Vinyls gifted TO this user (gifted_by_user_id is set)
+            // These are part of the main collection, but we need to filter them.
+            // Since we are paginating the main collection, we might not have all of them.
+            // Ideally we should have a separate endpoint or filter param for this.
+            // For now, let's filter the LOADED vinyls, which is imperfect but safe.
+            // OR, we can use the `giftedVinyls` from profile if it contained them?
+            // Wait, backend `giftedVinyls` are vinyls gifted BY the user.
+
+            // Let's filter the `vinyls` state.
+            return vinyls.filter(v => (v as any).gifted_by_user_id)
+        }
+        if (activeTab === "gifted_by") {
+            // "Offerts": Vinyls gifted BY this user (from profile.giftedVinyls)
+            return profile.giftedVinyls || []
+        }
+        // "Collection": All vinyls
+        return vinyls
+    }
+
+    const tabVinyls = getTabVinyls()
 
     return (
         <div className="max-w-4xl mx-auto relative">
@@ -285,7 +315,7 @@ function ProfileContent() {
                                         <span className="text-xs uppercase tracking-wider">Abonnements</span>
                                     </div>
                                     <div className="text-center">
-                                        <span className="block text-xl font-bold text-white">{profile.vinyls?.length || 0}</span>
+                                        <span className="block text-xl font-bold text-white">{totalCount || profile.vinyls?.length || 0}</span>
                                         <span className="text-xs uppercase tracking-wider">Vinyles</span>
                                     </div>
                                 </div>
@@ -328,86 +358,30 @@ function ProfileContent() {
                                             Offerts 💝
                                         </button>
                                     </div>
-                                    <button
-                                        onClick={() => setShowFilters(!showFilters)}
-                                        className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition md:hidden shrink-0"
-                                        aria-label="Toggle filters"
-                                    >
-                                        <SlidersHorizontal className="w-5 h-5" />
-                                    </button>
-                                </div>
-
-                                <div className={`${showFilters ? 'flex' : 'hidden'} md:flex flex-col sm:flex-row gap-4`}>
-                                    <input
-                                        type="text"
-                                        placeholder="Rechercher un vinyle..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm !text-black dark:!text-white placeholder:text-neutral-500 dark:placeholder:text-neutral-400 focus:border-primary outline-none w-full sm:w-64"
-                                    />
-
-                                    <select
-                                        value={selectedFormat}
-                                        onChange={(e) => setSelectedFormat(e.target.value as "all" | "vinyl" | "cd")}
-                                        className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm !text-black dark:!text-white focus:border-primary outline-none"
-                                    >
-                                        <option value="all">Tous</option>
-                                        <option value="vinyl">Vinyles</option>
-                                        <option value="cd">CDs</option>
-                                    </select>
-
-                                    <button
-                                        onClick={() => setGroupByArtist(!groupByArtist)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition border ${groupByArtist
-                                            ? "bg-primary text-primary-foreground border-primary"
-                                            : "!bg-white dark:!bg-neutral-900 !text-neutral-600 dark:!text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-primary"
-                                            }`}
-                                    >
-                                        {groupByArtist ? "Vue par Artiste" : "Vue Grille"}
-                                    </button>
                                 </div>
                             </div>
 
-                            {groupByArtist ? (
-                                <div className="space-y-8">
-                                    {Object.entries(vinylsByArtist).map(([artist, vinyls]: [string, any]) => (
-                                        <div key={artist} className="bg-card rounded-xl p-6 border border-border/50">
-                                            <h3 className="text-xl font-bold text-foreground mb-4 border-b border-border pb-2">{artist}</h3>
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                                {vinyls.map((vinyl: any) => (
-                                                    <VinylCard
-                                                        key={vinyl.id}
-                                                        vinyl={vinyl}
-                                                        onUpdate={fetchProfile}
-                                                        readOnly={!isOwner || activeTab === "gifted_by"}
-                                                        currentUserId={currentUser?.id}
-                                                        currentUsername={currentUser?.username}
-                                                        linkToDetail={true}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
+                            {activeTab === "collection" ? (
+                                <div className="mt-4">
+                                    <VinylCollection
+                                        vinyls={vinyls}
+                                        loading={loadingVinyls}
+                                        onUpdate={() => fetchVinyls(profile.id, true)}
+                                        title=""
+                                        totalCount={totalCount}
+                                        onLoadMore={loadMore}
+                                        loadingMore={loadingMore}
+                                        hasMore={hasMore}
+                                    />
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                    {filteredVinyls.map((vinyl: any) => (
-                                        <VinylCard
-                                            key={vinyl.id}
-                                            vinyl={vinyl}
-                                            onUpdate={fetchProfile}
-                                            readOnly={!isOwner || activeTab === "gifted_by"}
-                                            currentUserId={currentUser?.id}
-                                            currentUsername={currentUser?.username}
-                                            linkToDetail={true}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-
-                            {filteredVinyls.length === 0 && (
-                                <div className="text-center py-12 text-muted-foreground bg-card/30 rounded-lg">
-                                    Aucun vinyle trouvé.
+                                <div className="mt-4">
+                                    <VinylCollection
+                                        vinyls={tabVinyls}
+                                        loading={false}
+                                        onUpdate={() => fetchVinyls(profile.id, true)}
+                                        title={activeTab === "gifted_to" ? "Vinyles reçus" : "Vinyles offerts"}
+                                    />
                                 </div>
                             )}
                         </div>

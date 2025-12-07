@@ -28,21 +28,23 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [_editing, setEditing] = useState(false)
 
+  // Vinyl pagination state
+  const [vinyls, setVinyls] = useState<Vinyl[]>([])
+  const [loadingVinyls, setLoadingVinyls] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [offset, setOffset] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const LIMIT = 10
+
   useEffect(() => {
     loadProfile()
+    fetchVinyls(true)
   }, [])
 
   const loadProfile = async () => {
     try {
-      // Use the new /profile/me endpoint which uses the token's user ID
-      // This avoids issues with stale username in localStorage
       const profileData = await api.get(`/users/profile/me`)
-
-      // Fetch stats (followers count is not in the main profile object yet?)
-      // Actually, let's check if the backend returns it.
-      // The backend returns { user, vinyls, giftedVinyls, stats }
-      // But followersCount/followingCount are fetched separately in the original code.
-      // Let's keep fetching them using the ID from the profileData.user
 
       if (profileData && profileData.user) {
         try {
@@ -53,7 +55,6 @@ export default function ProfilePage() {
           console.warn("Could not fetch stats", e)
         }
 
-        // Also update localStorage with the fresh user data to keep it in sync
         const storedUser = JSON.parse(localStorage.getItem("user") || "{}")
         if (storedUser.username !== profileData.user.username) {
           storedUser.username = profileData.user.username
@@ -64,10 +65,47 @@ export default function ProfilePage() {
       setProfile(profileData)
     } catch (error) {
       console.error("Error loading profile:", error)
-      // If 401, maybe redirect to login?
-      // For now just log it.
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchVinyls = async (isInitial = false) => {
+    try {
+      if (isInitial) {
+        setLoadingVinyls(true)
+        setOffset(0)
+      } else {
+        setLoadingMore(true)
+      }
+
+      const currentOffset = isInitial ? 0 : offset
+      const result = await api.get(`/vinyls/my-collection?limit=${LIMIT}&offset=${currentOffset}`)
+
+      if (isInitial) {
+        setVinyls(result.data)
+      } else {
+        setVinyls(prev => {
+          const existingIds = new Set(prev.map(v => v.id))
+          const newVinyls = result.data.filter((v: Vinyl) => !existingIds.has(v.id))
+          return [...prev, ...newVinyls]
+        })
+      }
+
+      setHasMore(result.hasMore)
+      setTotalCount(result.total)
+      setOffset(currentOffset + result.data.length)
+    } catch (error) {
+      console.error("Failed to fetch vinyls", error)
+    } finally {
+      setLoadingVinyls(false)
+      setLoadingMore(false)
+    }
+  }
+
+  const loadMore = () => {
+    if (!loadingMore && hasMore) {
+      fetchVinyls(false)
     }
   }
 
@@ -90,10 +128,17 @@ export default function ProfilePage() {
         {profile && (
           <div className="mt-8">
             <VinylCollection
-              vinyls={profile.vinyls || []}
-              loading={false}
-              onUpdate={loadProfile}
+              vinyls={vinyls}
+              loading={loadingVinyls}
+              onUpdate={() => {
+                loadProfile()
+                fetchVinyls(true)
+              }}
               title="Vos Vinyles"
+              totalCount={totalCount}
+              onLoadMore={loadMore}
+              loadingMore={loadingMore}
+              hasMore={hasMore}
             />
           </div>
         )}

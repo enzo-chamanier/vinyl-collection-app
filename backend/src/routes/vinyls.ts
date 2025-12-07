@@ -52,7 +52,7 @@ router.get("/user/:userId", authMiddleware, async (req: AuthRequest, res: Respon
   try {
     const { userId } = req.params;
     const requesterId = req.user?.userId;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = parseInt(req.query.limit as string) || 10;
     const offset = parseInt(req.query.offset as string) || 0;
 
     // Check privacy
@@ -111,54 +111,55 @@ router.get("/user/:userId", authMiddleware, async (req: AuthRequest, res: Respon
     console.error(error);
     return res.status(500).json({ error: "Erreur lors de la récupération des vinyles" });
   }
+});
 
-  // --- Get collection stats (all vinyls for stats calculation) ---
-  router.get("/stats", authMiddleware, async (req: AuthRequest, res: Response) => {
-    try {
-      const result = await query(
-        `SELECT v.genre, v.artist
+// --- Get collection stats (all vinyls for stats calculation) ---
+router.get("/stats", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await query(
+      `SELECT v.genre, v.artist
        FROM vinyls v
        JOIN users u_owner ON v.user_id = u_owner.id
        WHERE v.user_id = $1 OR v.shared_with_user_id = $1`,
-        [req.user?.userId]
-      );
+      [req.user?.userId]
+    );
 
-      const vinyls = result.rows;
-      const genreCount: Record<string, number> = {};
-      const artistCount: Record<string, number> = {};
+    const vinyls = result.rows;
+    const genreCount: Record<string, number> = {};
+    const artistCount: Record<string, number> = {};
 
-      vinyls.forEach((vinyl: { genre?: string; artist?: string }) => {
-        const genres = vinyl.genre ? vinyl.genre.split(",").map((g: string) => g.trim()) : ["Inconnu"];
-        genres.forEach((g: string) => {
-          if (g) genreCount[g] = (genreCount[g] || 0) + 1;
-        });
-
-        const artistName = vinyl.artist ? vinyl.artist.replace(/\s*\([^)]*\)/g, "") : "Inconnu";
-        artistCount[artistName] = (artistCount[artistName] || 0) + 1;
+    vinyls.forEach((vinyl: { genre?: string; artist?: string }) => {
+      const genres = vinyl.genre ? vinyl.genre.split(",").map((g: string) => g.trim()) : ["Inconnu"];
+      genres.forEach((g: string) => {
+        if (g) genreCount[g] = (genreCount[g] || 0) + 1;
       });
 
-      return res.json({
-        total: vinyls.length,
-        genres: Object.entries(genreCount)
-          .sort((a, b) => b[1] - a[1])
-          .map(([name, count]) => ({ name, count })),
-        topArtists: Object.entries(artistCount)
-          .sort((a, b) => b[1] - a[1])
-          .map(([name, count]) => ({ name, count })),
-        totalArtists: Object.keys(artistCount).length
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erreur lors du calcul des statistiques" });
-    }
-  });
+      const artistName = vinyl.artist ? vinyl.artist.replace(/\s*\([^)]*\)/g, "") : "Inconnu";
+      artistCount[artistName] = (artistCount[artistName] || 0) + 1;
+    });
 
-  // --- Get single vinyl by ID ---
-  router.get("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
-    try {
-      const { id } = req.params;
-      const result = await query(
-        `SELECT v.*, 
+    return res.json({
+      total: vinyls.length,
+      genres: Object.entries(genreCount)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({ name, count })),
+      topArtists: Object.entries(artistCount)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({ name, count })),
+      totalArtists: Object.keys(artistCount).length
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors du calcul des statistiques" });
+  }
+});
+
+// --- Get single vinyl by ID ---
+router.get("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await query(
+      `SELECT v.*, 
               u_owner.id as owner_id,
               u_owner.username as owner_username,
               u_owner.profile_picture as owner_profile_picture,
@@ -172,81 +173,81 @@ router.get("/user/:userId", authMiddleware, async (req: AuthRequest, res: Respon
        LEFT JOIN users u_gift ON v.gifted_by_user_id = u_gift.id
        LEFT JOIN users u_share ON v.shared_with_user_id = u_share.id
        WHERE v.id = $1`,
-        [id, req.user?.userId]
-      );
+      [id, req.user?.userId]
+    );
 
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: "Vinyle non trouvé" });
-      }
-
-      return res.json(result.rows[0]);
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erreur lors de la récupération du vinyle" });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Vinyle non trouvé" });
     }
-  });
 
-  // --- Add vinyl ---
-  router.post("/add", authMiddleware, async (req: AuthRequest, res: Response) => {
-    try {
-      const {
-        title,
-        artist,
-        genre,
-        releaseYear,
-        barcode,
-        discogsId,
-        coverImage,
-        notes,
-        rating,
-        vinylColor,
-        discCount,
-        giftedByUserId,
-        sharedWithUserId,
-        format
-      } = req.body;
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors de la récupération du vinyle" });
+  }
+});
 
-      const vinylId = uuidv4();
-      const newVinyl = await query(
-        `INSERT INTO vinyls 
+// --- Add vinyl ---
+router.post("/add", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const {
+      title,
+      artist,
+      genre,
+      releaseYear,
+      barcode,
+      discogsId,
+      coverImage,
+      notes,
+      rating,
+      vinylColor,
+      discCount,
+      giftedByUserId,
+      sharedWithUserId,
+      format
+    } = req.body;
+
+    const vinylId = uuidv4();
+    const newVinyl = await query(
+      `INSERT INTO vinyls 
       (id, user_id, title, artist, genre, release_year, barcode, discogs_id, cover_image, notes, rating, vinyl_color, disc_count, gifted_by_user_id, shared_with_user_id, format, date_added, updated_at)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),NOW()) RETURNING *`,
-        [vinylId, req.user?.userId, title, artist, genre, releaseYear, barcode, discogsId, coverImage, notes, rating, vinylColor, discCount || 1, giftedByUserId || null, sharedWithUserId || null, format || "vinyl"]
-      );
+      [vinylId, req.user?.userId, title, artist, genre, releaseYear, barcode, discogsId, coverImage, notes, rating, vinylColor, discCount || 1, giftedByUserId || null, sharedWithUserId || null, format || "vinyl"]
+    );
 
-      return res.status(201).json(newVinyl.rows[0]);
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erreur lors de l'ajout du vinyle" });
-    }
-  });
+    return res.status(201).json(newVinyl.rows[0]);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors de l'ajout du vinyle" });
+  }
+});
 
-  // --- Update vinyl ---
-  router.put("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
-    try {
-      const { id } = req.params;
+// --- Update vinyl ---
+router.put("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
 
-      // Vérifie que le vinyle appartient à l'utilisateur
-      const existing = await query("SELECT * FROM vinyls WHERE id = $1 AND user_id = $2", [id, req.user?.userId]);
-      if (existing.rows.length === 0) return res.status(404).json({ error: "Vinyle non trouvé" });
+    // Vérifie que le vinyle appartient à l'utilisateur
+    const existing = await query("SELECT * FROM vinyls WHERE id = $1 AND user_id = $2", [id, req.user?.userId]);
+    if (existing.rows.length === 0) return res.status(404).json({ error: "Vinyle non trouvé" });
 
-      const {
-        title,
-        artist,
-        genre,
-        releaseYear,
-        coverImage,
-        notes,
-        rating,
-        vinylColor,
-        discCount,
-        giftedByUserId,
-        sharedWithUserId,
-        format
-      } = req.body;
+    const {
+      title,
+      artist,
+      genre,
+      releaseYear,
+      coverImage,
+      notes,
+      rating,
+      vinylColor,
+      discCount,
+      giftedByUserId,
+      sharedWithUserId,
+      format
+    } = req.body;
 
-      const updatedVinyl = await query(
-        `UPDATE vinyls SET
+    const updatedVinyl = await query(
+      `UPDATE vinyls SET
         title = $1,
         artist = $2,
         genre = $3,
@@ -262,34 +263,34 @@ router.get("/user/:userId", authMiddleware, async (req: AuthRequest, res: Respon
         updated_at = NOW()
       WHERE id = $13 AND user_id = $14
       RETURNING *`,
-        [title, artist, genre, releaseYear, coverImage, notes, rating, vinylColor, discCount || 1, giftedByUserId || null, sharedWithUserId || null, format || "vinyl", id, req.user?.userId]
-      );
+      [title, artist, genre, releaseYear, coverImage, notes, rating, vinylColor, discCount || 1, giftedByUserId || null, sharedWithUserId || null, format || "vinyl", id, req.user?.userId]
+    );
 
-      if (updatedVinyl.rows.length === 0) {
-        return res.status(404).json({ error: "Vinyle non trouvé" });
-      }
-
-      return res.json(updatedVinyl.rows[0]);
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erreur lors de la mise à jour du vinyle" });
+    if (updatedVinyl.rows.length === 0) {
+      return res.status(404).json({ error: "Vinyle non trouvé" });
     }
-  });
 
-  // --- Delete vinyl ---
-  router.delete("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
-    try {
-      const { id } = req.params;
+    return res.json(updatedVinyl.rows[0]);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors de la mise à jour du vinyle" });
+  }
+});
 
-      const existing = await query("SELECT * FROM vinyls WHERE id = $1 AND user_id = $2", [id, req.user?.userId]);
-      if (existing.rows.length === 0) return res.status(404).json({ error: "Vinyle non trouvé" });
+// --- Delete vinyl ---
+router.delete("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
 
-      await query("DELETE FROM vinyls WHERE id = $1", [id]);
-      return res.json({ message: "Vinyle supprimé" });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erreur lors de la suppression du vinyle" });
-    }
-  });
+    const existing = await query("SELECT * FROM vinyls WHERE id = $1 AND user_id = $2", [id, req.user?.userId]);
+    if (existing.rows.length === 0) return res.status(404).json({ error: "Vinyle non trouvé" });
 
-  export default router;
+    await query("DELETE FROM vinyls WHERE id = $1", [id]);
+    return res.json({ message: "Vinyle supprimé" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erreur lors de la suppression du vinyle" });
+  }
+});
+
+export default router;

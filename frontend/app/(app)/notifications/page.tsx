@@ -34,7 +34,7 @@ export default function NotificationsPage() {
     const [permissionStatus, setPermissionStatus] = useState<string>("default")
     const [isSubscribing, setIsSubscribing] = useState(false)
     const router = useRouter()
-    const LIMIT = 20
+    const LIMIT = 10
 
     const [filter, setFilter] = useState<'all' | 'follows' | 'likes' | 'comments'>('all')
 
@@ -60,7 +60,11 @@ export default function NotificationsPage() {
             if (isInitial) {
                 setNotifications(mappedNotifs)
             } else {
-                setNotifications(prev => [...prev, ...mappedNotifs])
+                setNotifications(prev => {
+                    const existingIds = new Set(prev.map(n => n.id))
+                    const newItems = mappedNotifs.filter((n: Notification) => !existingIds.has(n.id))
+                    return [...prev, ...newItems]
+                })
             }
 
             setHasMore(result.hasMore)
