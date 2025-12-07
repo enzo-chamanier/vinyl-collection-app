@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Heart, MessageCircle, User, Volume2, VolumeX, Play, Pause } from "lucide-react"
-import { api } from "@/lib/api"
+import { api, API_URL } from "@/lib/api"
 import { CommentsSection } from "./comments-section"
 import { VinylColorData, getVinylBackground } from "../vinyl/vinyl-color-picker"
 import Link from "next/link"
@@ -53,6 +53,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     const [audioUnlocked, setAudioUnlocked] = useState(false)
     const [showHeartAnimation, setShowHeartAnimation] = useState(false)
     const [commentsFullscreen, setCommentsFullscreen] = useState(false)
+    const [pendingAudioFetch, setPendingAudioFetch] = useState<{ artist: string, title: string } | null>(null)
     const wasPlayingRef = useRef(false)
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -105,6 +106,14 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
 
     // Fetch audio preview from Deezer via backend proxy
     const fetchAudioPreview = useCallback(async (artist: string, title: string) => {
+        // If audio is not unlocked yet, defer the fetch
+        if (!audioUnlocked) {
+            console.log("Audio locked, deferring fetch for:", title)
+            setPendingAudioFetch({ artist, title })
+            setAudioUrl(null) // Ensure no URL is set
+            return
+        }
+
         setAudioLoading(true)
         setAudioUrl(null)
 
@@ -121,7 +130,9 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                 const track = data.data[0] as DeezerTrack
                 if (track.preview) {
                     console.log("Fetched audio preview:", track.preview)
-                    setAudioUrl(track.preview)
+                    // Use our backend proxy to avoid CORS issues on iOS PWA
+                    const proxyUrl = `${API_URL}/music/proxy?url=${encodeURIComponent(track.preview)}`
+                    setAudioUrl(proxyUrl)
                     return
                 }
             }
@@ -130,7 +141,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         } finally {
             setAudioLoading(false)
         }
-    }, [])
+    }, [audioUnlocked])
 
     // Load audio when slide changes
     useEffect(() => {
@@ -158,77 +169,81 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
 
     // Unlock audio on first user interaction
     const unlockAudio = useCallback(() => {
-        if (!audioUnlocked && audioRef.current && !audioLoading) {
-            if (audioUrl) {
-                addDebugLog(`Unlock: ${audioUrl.substring(0, 20)}...`)
-                // Set src and play immediately within the user interaction event
-                audioRef.current.src = audioUrl
-                // audioRef.current.load() // REMOVED: Can cause issues on modern iOS if called right after src
+        if (!audioRef.current) return
 
-                const playPromise = audioRef.current.play()
+        // If we have pending audio to fetch, do it now
+        if (pendingAudioFetch) {
+            addDebugLog("Unlocking and fetching pending audio")
+            // We need to set unlocked to true FIRST so fetchAudioPreview proceeds
+            setAudioUnlocked(true)
+            // We can't call fetchAudioPreview directly here because it depends on audioUnlocked state
+            // which won't be updated yet in this closure. 
+            // Instead, we'll rely on a useEffect to trigger the fetch when audioUnlocked becomes true
+        }
 
-                if (playPromise !== undefined) {
-                    playPromise
-                        .then(() => {
-                            addDebugLog("Play success")
-                            console.log("Audio unlock successful")
-                            setIsPlaying(true)
-                            setAudioUnlocked(true)
-                        })
-                        .catch((e) => {
-                            addDebugLog(`Play error: ${e.message}`)
-                            console.error("Unlock play failed:", e)
-                            // If it fails, we might need to reset the source or try again
-                            // But for now, let's keep the state unlocked so they can try clicking the vinyl
-                            setAudioUnlocked(true)
-                        })
-                } else {
-                    addDebugLog("No promise")
+        // Just play an empty promise to unlock the audio context
+        const playPromise = audioRef.current.play()
+
+        if (playPromise !== undefined) {
+            playPromise
+                .then(() => {
+                    addDebugLog("Unlock success")
                     setIsPlaying(true)
                     setAudioUnlocked(true)
-                }
-            } else {
-                addDebugLog("No audio URL")
-                setAudioUnlocked(true)
-            }
+                })
+                .catch((e) => {
+                    addDebugLog(`Unlock error: ${e.message}`)
+                    // Mark as unlocked and playing so we can retry
+                    setAudioUnlocked(true)
+                    setIsPlaying(true)
+                })
+        } else {
+            setAudioUnlocked(true)
+            setIsPlaying(true)
         }
-    }, [audioUnlocked, audioUrl, audioLoading])
+    }, [pendingAudioFetch])
 
-    // Auto-play when audio loads (only if already unlocked and track changes)
+    // Trigger pending fetch when unlocked
     useEffect(() => {
-        if (audioUrl && !isMuted && audioRef.current && audioUnlocked) {
-            // Only play if the src is different (new track)
-            // We compare the end of the src because the browser might resolve it to a full URL
-            if (!audioRef.current.src.endsWith(audioUrl)) {
-                setIsPlaying(true)
+        if (audioUnlocked && pendingAudioFetch) {
+            console.log("Audio unlocked, triggering pending fetch")
+            fetchAudioPreview(pendingAudioFetch.artist, pendingAudioFetch.title)
+            setPendingAudioFetch(null)
+        }
+    }, [audioUnlocked, pendingAudioFetch, fetchAudioPreview])
+
+    // Update audio source when URL changes
+    useEffect(() => {
+        if (audioRef.current && audioUrl && audioUnlocked) {
+            // Only update src if it changed to avoid resetting playback
+            if (audioRef.current.src !== audioUrl) {
                 audioRef.current.src = audioUrl
-                audioRef.current.load() // Ensure we load the new source
+                // Ensure we play immediately after source change (for feed behavior)
                 audioRef.current.play().catch(() => { })
+                setIsPlaying(true)
             }
         }
-    }, [audioUrl, audioUnlocked, isMuted])
+    }, [audioUrl, audioUnlocked])
 
-    // Navigate to slide
-    const goToSlide = useCallback((index: number, direction?: 'up' | 'down') => {
-        if (!audioUnlocked) return
-
+    const goToSlide = useCallback((index: number, direction: 'up' | 'down' = 'up') => {
         if (index >= 0 && index < items.length) {
-            setSwipeDirection(direction || null)
+            setSwipeDirection(direction)
+
+            // Reset audio state
+            setIsPlaying(false)
+            setAudioLoading(true)
+
             setTimeout(() => {
                 setCurrentIndex(index)
                 setSwipeDirection(null)
             }, 250)
-            if (audioRef.current) {
-                audioRef.current.pause()
-            }
-            setIsPlaying(false)
 
             // Load more items when approaching the end (3 items before end)
             if (index >= items.length - 3 && hasMore && onLoadMore) {
                 onLoadMore()
             }
         }
-    }, [items.length, hasMore, onLoadMore, audioUnlocked])
+    }, [items.length, hasMore, onLoadMore])
 
     // Keyboard navigation
     useEffect(() => {
@@ -442,21 +457,19 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             {/* Audio unlock overlay */}
             {!audioUnlocked && (
                 <div
-                    className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer"
-                    onClick={(e) => {
-                        e.preventDefault()
-                        if (!audioLoading) unlockAudio()
-                    }}
+                    className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
                     onTouchEnd={(e) => {
-                        e.preventDefault()
-                        if (!audioLoading) unlockAudio()
+                        e.stopPropagation()
+                        if (audioUrl) unlockAudio()
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        unlockAudio()
                     }}
                 >
-                    <div className="text-center animate-pulse">
-                        <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-4">
-                            {audioLoading ? (
-                                <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : audioUrl ? (
+                    <div className="flex flex-col items-center gap-4 animate-pulse">
+                        <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30">
+                            {audioUrl || pendingAudioFetch ? (
                                 <Volume2 size={40} className="text-white" />
                             ) : (
                                 <Play size={40} className="text-white" />
@@ -464,28 +477,28 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                         </div>
                         <p className="text-white text-lg font-medium">
                             {audioLoading
-                                ? "Chargement de l'extrait..."
-                                : audioUrl
-                                    ? "Appuyez pour activer le son"
-                                    : "Appuyez pour commencer"}
+                                ? "Chargement..."
+                                : "Toucher pour activer le son"}
                         </p>
                     </div>
                 </div>
             )}
 
             {/* Heart animation on double tap */}
-            {showHeartAnimation && (
-                <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
-                    <Heart
-                        size={100}
-                        fill="#ff2d55"
-                        className="text-[#ff2d55] drop-shadow-lg"
-                        style={{
-                            animation: 'heartPop 0.6s ease-out forwards',
-                        }}
-                    />
-                </div>
-            )}
+            {
+                showHeartAnimation && (
+                    <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+                        <Heart
+                            size={100}
+                            fill="#ff2d55"
+                            className="text-[#ff2d55] drop-shadow-lg"
+                            style={{
+                                animation: 'heartPop 0.6s ease-out forwards',
+                            }}
+                        />
+                    </div>
+                )
+            }
 
             {/* Main content */}
             <div
@@ -779,6 +792,6 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                     </div>
                 )
             }
-        </div>
+        </div >
     )
 }

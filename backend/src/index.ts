@@ -25,17 +25,23 @@ const PORT = process.env.PORT || 5000;
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // Allow all origins for development
+    origin: [
+      "http://localhost:3000",
+      /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:3000$/ // Allow local network IPs
+    ],
     credentials: true,
   },
 });
 
-console.log("Socket.io initialized with origin:", process.env.FRONTEND_URL || "http://localhost:3000");
+console.log("Socket.io initialized");
 
 // Middleware
 app.use(
   cors({
-    origin: true, // Allow all origins for development
+    origin: [
+      "http://localhost:3000",
+      /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:3000$/ // Allow local network IPs
+    ],
     credentials: true,
   })
 );
@@ -65,7 +71,7 @@ app.use("/api/scan", authMiddleware, scanRouter);
 app.use("/api/analytics", authMiddleware, analyticsRouter);
 app.use("/api/interactions", authMiddleware, interactionsRouter);
 app.use("/api/notifications", authMiddleware, notificationsRouter);
-app.use("/api/music", authMiddleware, musicRouter);
+app.use("/api/music", musicRouter);
 
 // Error handling
 app.use(errorHandler);

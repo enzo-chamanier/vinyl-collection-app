@@ -2,8 +2,10 @@ interface RequestOptions extends RequestInit {
   headers?: Record<string, string>
 }
 
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+
 async function request(endpoint: string, options: RequestOptions = {}): Promise<any> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+  const baseUrl = API_URL
   const url = `${baseUrl}${endpoint}`
 
   const headers: Record<string, string> = {

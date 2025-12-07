@@ -26,4 +26,36 @@ router.get("/search", async (req: Request, res: Response) => {
     }
 });
 
+// Proxy for audio files to handle CORS and Range requests
+router.get("/proxy", async (req: Request, res: Response) => {
+    try {
+        const { url } = req.query;
+        if (!url || typeof url !== "string") {
+            return res.status(400).json({ error: "URL is required" });
+        }
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            return res.status(response.status).send("Failed to fetch audio");
+        }
+
+        // Forward headers
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Content-Type", "audio/mpeg");
+        res.setHeader("Cache-Control", "public, max-age=86400");
+
+        // Stream the response body
+        if (response.body) {
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            return res.send(buffer);
+        } else {
+            return res.end();
+        }
+    } catch (error) {
+        console.error("Proxy error:", error);
+        return res.status(500).json({ error: "Proxy failed" });
+    }
+});
+
 export default router;
