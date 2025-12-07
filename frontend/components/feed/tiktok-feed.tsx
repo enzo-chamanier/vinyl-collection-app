@@ -147,7 +147,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
 
     // Unlock audio on first user interaction
     const unlockAudio = useCallback(() => {
-        if (!audioUnlocked && audioRef.current) {
+        if (!audioUnlocked && audioRef.current && !audioLoading) {
             setAudioUnlocked(true)
             if (audioUrl) {
                 audioRef.current.src = audioUrl
@@ -155,7 +155,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                 setIsPlaying(true)
             }
         }
-    }, [audioUnlocked, audioUrl])
+    }, [audioUnlocked, audioUrl, audioLoading])
 
     // Auto-play when audio loads (only if already unlocked)
     useEffect(() => {
@@ -164,10 +164,12 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             audioRef.current.src = audioUrl
             audioRef.current.play().catch(() => { })
         }
-    }, [audioUrl, audioUnlocked])
+    }, [audioUrl, audioUnlocked]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Navigate to slide
     const goToSlide = useCallback((index: number, direction?: 'up' | 'down') => {
+        if (!audioUnlocked) return
+
         if (index >= 0 && index < items.length) {
             setSwipeDirection(direction || null)
             setTimeout(() => {
@@ -184,7 +186,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                 onLoadMore()
             }
         }
-    }, [items.length, hasMore, onLoadMore])
+    }, [items.length, hasMore, onLoadMore, audioUnlocked])
 
     // Keyboard navigation
     useEffect(() => {
@@ -391,14 +393,28 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             {!audioUnlocked && (
                 <div
                     className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer"
-                    onClick={unlockAudio}
+                    onClick={() => {
+                        if (!audioLoading) {
+                            unlockAudio()
+                        }
+                    }}
                 >
                     <div className="text-center animate-pulse">
                         <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-4">
-                            {audioUrl ? <Volume2 size={40} className="text-white" /> : <Play size={40} className="text-white" />}
+                            {audioLoading ? (
+                                <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : audioUrl ? (
+                                <Volume2 size={40} className="text-white" />
+                            ) : (
+                                <Play size={40} className="text-white" />
+                            )}
                         </div>
                         <p className="text-white text-lg font-medium">
-                            {audioUrl ? "Appuyez pour activer le son" : "Appuyez pour commencer"}
+                            {audioLoading
+                                ? "Chargement de l'extrait..."
+                                : audioUrl
+                                    ? "Appuyez pour activer le son"
+                                    : "Appuyez pour commencer"}
                         </p>
                     </div>
                 </div>
