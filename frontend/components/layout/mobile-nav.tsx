@@ -24,6 +24,17 @@ export function MobileNav() {
         fetchProfile()
     }, [])
 
+    const [isHidden, setIsHidden] = useState(false)
+
+    useEffect(() => {
+        const handleToggleNavbar = (e: CustomEvent<{ hidden: boolean }>) => {
+            setIsHidden(e.detail.hidden)
+        }
+
+        window.addEventListener('toggle-navbar' as any, handleToggleNavbar as any)
+        return () => window.removeEventListener('toggle-navbar' as any, handleToggleNavbar as any)
+    }, [])
+
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY
@@ -68,6 +79,8 @@ export function MobileNav() {
             </button>
         )
     }
+
+    if (isHidden) return null
 
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-neutral-950 border-t border-neutral-800 z-50 pb-6 animate-in fade-in slide-in-from-bottom-4">

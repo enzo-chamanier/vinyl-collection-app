@@ -60,6 +60,13 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     const lastTapTime = useRef(0)
     const commentsDragStartY = useRef(0)
 
+    // Cleanup navbar visibility on unmount
+    useEffect(() => {
+        return () => {
+            window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: { hidden: false } }))
+        }
+    }, [])
+
     // Initialize states from items
     useEffect(() => {
         const liked: { [key: string]: boolean } = {}
@@ -296,6 +303,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     const openComments = useCallback(() => {
         setShowComments(true)
         setCommentsFullscreen(false)
+        window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: { hidden: true } }))
     }, [])
 
     // Close comments - resume audio if was playing before fullscreen
@@ -305,6 +313,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             setIsPlaying(true)
         }
         setCommentsFullscreen(false)
+        window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: { hidden: false } }))
     }, [commentsFullscreen])
 
     // Toggle fullscreen - pause/resume audio accordingly
@@ -462,36 +471,71 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                         }`}
                 >
                     {/* Vinyl disc animation with cover - responsive sizes */}
-                    <div className="relative w-44 h-44 min-[400px]:w-52 min-[400px]:h-52 sm:w-64 sm:h-64 md:w-72 md:h-72">
-                        {/* Spinning vinyl disc behind cover */}
-                        <div
-                            className={`absolute inset-0 rounded-full ${isPlaying ? 'animate-spin' : ''}`}
-                            style={{
-                                animation: isPlaying ? 'spin 3s linear infinite' : 'none',
-                                background: displayColors[0]
-                                    ? getVinylBackground(displayColors[0].type, displayColors[0].primary, displayColors[0].secondary)
-                                    : '#1a1a1a',
-                                transform: 'translateX(-25%)'
-                            }}
-                        >
-                            {/* Center label with disc name */}
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-black/60 flex flex-col items-center justify-center border border-white/10">
-                                    <span className="text-[6px] sm:text-[8px] text-white/60 font-medium uppercase">
-                                        {currentItem.format === 'CD' ? 'CD' : 'Vinyl'}
-                                    </span>
-                                    {currentItem.disc_name && (
-                                        <span className="text-[5px] sm:text-[7px] text-white/40 text-center px-1 truncate max-w-full">
-                                            {currentItem.disc_name}
-                                        </span>
-                                    )}
+                    <div className="relative w-32 h-32 min-[350px]:w-44 min-[350px]:h-44 min-[400px]:w-52 min-[400px]:h-52 sm:w-64 sm:h-64 md:w-72 md:h-72">
+                        {/* Spinning vinyl discs behind cover */}
+                        {Array.from({ length: Math.min(discCount, 4) }).map((_, i) => {
+                            // Calculate offset: first disc (i=0) is closest to cover
+                            // We want them to stack to the left
+                            // i=0 -> -25% (standard)
+                            // i=1 -> -37%
+                            // i=2 -> -49%
+                            const offset = -25 - (i * 12)
+                            const zIndex = -1 - i // Stack backwards
+                            const color = displayColors[i % displayColors.length]
+
+                            // Determine border color based on brightness
+                            let borderColor = "rgba(255, 255, 255, 0.3)" // Default light border for dark vinyls
+                            if (color && color.primary) {
+                                // Simple brightness check
+                                const hex = color.primary.replace('#', '')
+                                const r = parseInt(hex.substr(0, 2), 16)
+                                const g = parseInt(hex.substr(2, 2), 16)
+                                const b = parseInt(hex.substr(4, 2), 16)
+                                const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000
+
+                                // If bright vinyl, use dark border. If dark vinyl, use light border.
+                                if (brightness > 155) {
+                                    borderColor = "rgba(0, 0, 0, 0.3)"
+                                } else {
+                                    borderColor = "rgba(255, 255, 255, 0.4)" // Stronger white border
+                                }
+                            }
+
+                            return (
+                                <div
+                                    key={i}
+                                    className={`absolute inset-0 rounded-full shadow-xl ${isPlaying ? 'animate-spin' : ''}`}
+                                    style={{
+                                        animation: isPlaying ? 'spin 3s linear infinite' : 'none',
+                                        background: color
+                                            ? getVinylBackground(color.type, color.primary, color.secondary)
+                                            : '#1a1a1a',
+                                        transform: `translateX(${offset}%)`,
+                                        zIndex: zIndex,
+                                        transition: 'transform 0.3s ease-out',
+                                        border: `1px solid ${borderColor}`
+                                    }}
+                                >
+                                    {/* Center label with disc name */}
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-black/60 flex flex-col items-center justify-center border border-white/10">
+                                            <span className="text-[6px] sm:text-[8px] text-white/60 font-medium uppercase">
+                                                {currentItem.format === 'CD' ? 'CD' : 'Vinyl'}
+                                            </span>
+                                            {(currentItem.disc_name || discCount > 1) && (
+                                                <span className="text-[5px] sm:text-[7px] text-white/40 text-center px-1 truncate max-w-full">
+                                                    {discCount > 1 ? `Disc ${i + 1}` : currentItem.disc_name}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Grooves */}
+                                    <div className="absolute inset-3 sm:inset-4 rounded-full border border-white/5" />
+                                    <div className="absolute inset-6 sm:inset-8 rounded-full border border-white/5" />
+                                    <div className="absolute inset-9 sm:inset-12 rounded-full border border-white/5" />
                                 </div>
-                            </div>
-                            {/* Grooves */}
-                            <div className="absolute inset-3 sm:inset-4 rounded-full border border-white/5" />
-                            <div className="absolute inset-6 sm:inset-8 rounded-full border border-white/5" />
-                            <div className="absolute inset-9 sm:inset-12 rounded-full border border-white/5" />
-                        </div>
+                            )
+                        })}
 
                         {/* Album cover */}
                         <div className="absolute inset-0 rounded-lg overflow-hidden shadow-2xl z-10">
@@ -633,13 +677,16 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             {
                 showComments && (
                     <div
-                        className={`absolute inset-0 z-50 flex items-end justify-center bg-black/60 ${commentsFullscreen ? 'pb-0' : 'pb-4'}`}
-                        style={{ animation: 'fadeIn 0.2s ease-out' }}
+                        className={`fixed inset-0 z-[9999] flex items-end justify-center bg-black/60 ${commentsFullscreen ? 'pb-0' : 'pb-4'}`}
+                        style={{
+                            animation: 'fadeIn 0.2s ease-out',
+                            // Removed manual height to rely on CSS fixed positioning
+                        }}
                         onClick={closeComments}
                     >
                         <div
                             className={`bg-neutral-900 w-full max-w-lg flex flex-col transition-all duration-300 ${commentsFullscreen
-                                ? 'h-[calc(100%-64px)] mt-16 rounded-t-2xl mx-0 pb-8'
+                                ? 'h-full mt-0 rounded-none mx-0 pb-0' // Full height when fullscreen
                                 : 'h-[65%] rounded-3xl'
                                 }`}
                             style={{ animation: 'slideUp 0.3s ease-out' }}
@@ -670,13 +717,18 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                                     </button>
                                 </div>
                             </div>
-                            <div className="flex-1 overflow-y-auto px-3 py-2 min-h-0">
+                            <div className="flex-1 px-3 min-h-0 flex flex-col">
                                 <CommentsSection
                                     vinylId={currentItem.id}
                                     currentUserId={currentUserId}
                                     vinylOwnerId={currentItem.user_id}
                                     onCommentAdded={() => setCommentCounts(prev => ({ ...prev, [currentItem.id]: (prev[currentItem.id] || 0) + 1 }))}
                                     variant="modal"
+                                    onInputFocus={() => {
+                                        if (!commentsFullscreen) {
+                                            toggleCommentsFullscreen()
+                                        }
+                                    }}
                                 />
                             </div>
                         </div>
