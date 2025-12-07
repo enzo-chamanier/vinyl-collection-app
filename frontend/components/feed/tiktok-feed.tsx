@@ -38,8 +38,6 @@ interface DeezerTrack {
     artist: { name: string }
 }
 
-const SILENT_AUDIO_URL = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQQAAAAAAA=="
-
 export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
     const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined)
@@ -68,8 +66,6 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     const addDebugLog = (msg: string) => {
         setDebugLog(prev => [msg, ...prev].slice(0, 5))
     }
-
-
 
     // Cleanup navbar visibility on unmount
     useEffect(() => {
@@ -112,7 +108,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         if (!audioUnlocked) {
             console.log("Audio locked, deferring fetch for:", title)
             setPendingAudioFetch({ artist, title })
-            setAudioUrl(null) // Ensure no URL is set
+            setAudioUrl(null)
             return
         }
 
@@ -120,19 +116,16 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         setAudioUrl(null)
 
         try {
-            // Clean artist and title (remove parentheses content)
             const cleanArtist = artist.replace(/\s*\([^)]*\)/g, "").trim()
             const cleanTitle = title.replace(/\s*\([^)]*\)/g, "").trim()
             const query = `${cleanArtist} ${cleanTitle}`
 
-            // Use our backend proxy to avoid CORS
             const data = await api.get(`/music/search?q=${encodeURIComponent(query)}`)
 
             if (data.data && data.data.length > 0) {
                 const track = data.data[0] as DeezerTrack
                 if (track.preview) {
                     console.log("Fetched audio preview:", track.preview)
-                    // Use our backend proxy to avoid CORS issues on iOS PWA
                     const proxyUrl = `${API_URL}/music/proxy?url=${encodeURIComponent(track.preview)}`
                     setAudioUrl(proxyUrl)
                     return
@@ -154,51 +147,37 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         }
     }, [currentIndex, items, fetchAudioPreview])
 
-
-
-    // Play/pause audio (without changing source)
+    // Play/pause audio
     useEffect(() => {
         if (audioRef.current && audioUrl) {
             if (isPlaying && !isMuted) {
-                audioRef.current.play().catch(() => {
-                    // Browser blocked autoplay - that's ok, user can click play
-                })
+                audioRef.current.play().catch(() => { })
             } else {
                 audioRef.current.pause()
             }
         }
-    }, [isPlaying, isMuted])
+    }, [isPlaying, isMuted, audioUrl])
 
     // Unlock audio on first user interaction
     const unlockAudio = useCallback(() => {
         if (!audioRef.current) return
 
-        // If we have pending audio to fetch, do it now
+        // ALWAYS interact with the audio element to bless it on iOS
+        audioRef.current.load()
+
         if (pendingAudioFetch) {
-            addDebugLog("Unlocking with silent audio")
-            // Play silent audio immediately to unlock context synchronously
-            audioRef.current.src = SILENT_AUDIO_URL
-
-            // We need to set unlocked to true FIRST so fetchAudioPreview proceeds
+            addDebugLog("Unlocking and fetching pending audio")
             setAudioUnlocked(true)
-        }
-
-        // Play to unlock the audio context
-        const playPromise = audioRef.current.play()
-
-        if (playPromise !== undefined) {
-            playPromise
+            setIsPlaying(true)
+        } else if (audioUrl) {
+            audioRef.current.play()
                 .then(() => {
                     addDebugLog("Unlock success")
                     setIsPlaying(true)
                     setAudioUnlocked(true)
                 })
                 .catch((e) => {
-                    // Ignore AbortError which happens when we switch source quickly
-                    if (e.name !== 'AbortError') {
-                        addDebugLog(`Unlock error: ${e.message}`)
-                    }
-                    // Mark as unlocked and playing so we can retry
+                    addDebugLog(`Unlock error: ${e.message}`)
                     setAudioUnlocked(true)
                     setIsPlaying(true)
                 })
@@ -206,7 +185,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             setAudioUnlocked(true)
             setIsPlaying(true)
         }
-    }, [pendingAudioFetch])
+    }, [pendingAudioFetch, audioUrl])
 
     // Trigger pending fetch when unlocked
     useEffect(() => {
@@ -220,10 +199,9 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     // Update audio source when URL changes
     useEffect(() => {
         if (audioRef.current && audioUrl && audioUnlocked) {
-            // Only update src if it changed to avoid resetting playback
             if (audioRef.current.src !== audioUrl) {
                 audioRef.current.src = audioUrl
-                // Ensure we play immediately after source change (for feed behavior)
+                audioRef.current.load()
                 audioRef.current.play().catch(() => { })
                 setIsPlaying(true)
             }
@@ -233,8 +211,6 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     const goToSlide = useCallback((index: number, direction: 'up' | 'down' = 'up') => {
         if (index >= 0 && index < items.length) {
             setSwipeDirection(direction)
-
-            // Reset audio state
             setIsPlaying(false)
             setAudioLoading(true)
 
@@ -243,7 +219,6 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                 setSwipeDirection(null)
             }, 250)
 
-            // Load more items when approaching the end (3 items before end)
             if (index >= items.length - 3 && hasMore && onLoadMore) {
                 onLoadMore()
             }
@@ -333,7 +308,6 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         const DOUBLE_TAP_DELAY = 300
 
         if (now - lastTapTime.current < DOUBLE_TAP_DELAY) {
-            // Double tap detected - cancel single tap action and like
             if (singleTapTimeout.current) {
                 clearTimeout(singleTapTimeout.current)
                 singleTapTimeout.current = null
@@ -342,11 +316,9 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             if (itemId && !likedItems[itemId]) {
                 handleLike(itemId)
             }
-            // Show heart animation
             setShowHeartAnimation(true)
             setTimeout(() => setShowHeartAnimation(false), 800)
         } else {
-            // Single tap - schedule pause/play after delay
             singleTapTimeout.current = setTimeout(() => {
                 setIsPlaying(prev => !prev)
             }, DOUBLE_TAP_DELAY)
@@ -354,14 +326,14 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         lastTapTime.current = now
     }, [currentIndex, items, likedItems])
 
-    // Open comments - don't pause audio (only fullscreen pauses)
+    // Open comments
     const openComments = useCallback(() => {
         setShowComments(true)
         setCommentsFullscreen(false)
         window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: { hidden: true } }))
     }, [])
 
-    // Close comments - resume audio if was playing before fullscreen
+    // Close comments
     const closeComments = useCallback(() => {
         setShowComments(false)
         if (commentsFullscreen && wasPlayingRef.current) {
@@ -371,15 +343,13 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: { hidden: false } }))
     }, [commentsFullscreen])
 
-    // Toggle fullscreen - pause/resume audio accordingly
+    // Toggle fullscreen
     const toggleCommentsFullscreen = useCallback(() => {
         if (!commentsFullscreen) {
-            // Going fullscreen - save state and pause
             wasPlayingRef.current = isPlaying
             setIsPlaying(false)
             setCommentsFullscreen(true)
         } else {
-            // Leaving fullscreen - resume if was playing
             if (wasPlayingRef.current) {
                 setIsPlaying(true)
             }
@@ -397,10 +367,8 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         const diff = commentsDragStartY.current - dragEndY
 
         if (diff > 80 && !commentsFullscreen) {
-            // Dragged up - go fullscreen
             toggleCommentsFullscreen()
         } else if (diff < -80) {
-            // Dragged down - close or minimize
             if (commentsFullscreen) {
                 toggleCommentsFullscreen()
             } else {
@@ -465,7 +433,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                     className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
                     onTouchEnd={(e) => {
                         e.stopPropagation()
-                        if (audioUrl) unlockAudio()
+                        unlockAudio()
                     }}
                     onClick={(e) => {
                         e.stopPropagation()
@@ -490,20 +458,18 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             )}
 
             {/* Heart animation on double tap */}
-            {
-                showHeartAnimation && (
-                    <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
-                        <Heart
-                            size={100}
-                            fill="#ff2d55"
-                            className="text-[#ff2d55] drop-shadow-lg"
-                            style={{
-                                animation: 'heartPop 0.6s ease-out forwards',
-                            }}
-                        />
-                    </div>
-                )
-            }
+            {showHeartAnimation && (
+                <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+                    <Heart
+                        size={100}
+                        fill="#ff2d55"
+                        className="text-[#ff2d55] drop-shadow-lg"
+                        style={{
+                            animation: 'heartPop 0.6s ease-out forwards',
+                        }}
+                    />
+                </div>
+            )}
 
             {/* Main content */}
             <div
@@ -536,30 +502,22 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                     <div className="relative w-32 h-32 min-[350px]:w-44 min-[350px]:h-44 min-[400px]:w-52 min-[400px]:h-52 sm:w-64 sm:h-64 md:w-72 md:h-72">
                         {/* Spinning vinyl discs behind cover */}
                         {Array.from({ length: Math.min(discCount, 4) }).map((_, i) => {
-                            // Calculate offset: first disc (i=0) is closest to cover
-                            // We want them to stack to the left
-                            // i=0 -> -25% (standard)
-                            // i=1 -> -37%
-                            // i=2 -> -49%
                             const offset = -25 - (i * 12)
-                            const zIndex = -1 - i // Stack backwards
+                            const zIndex = -1 - i
                             const color = displayColors[i % displayColors.length]
 
-                            // Determine border color based on brightness
-                            let borderColor = "rgba(255, 255, 255, 0.3)" // Default light border for dark vinyls
+                            let borderColor = "rgba(255, 255, 255, 0.3)"
                             if (color && color.primary) {
-                                // Simple brightness check
                                 const hex = color.primary.replace('#', '')
                                 const r = parseInt(hex.substr(0, 2), 16)
                                 const g = parseInt(hex.substr(2, 2), 16)
                                 const b = parseInt(hex.substr(4, 2), 16)
                                 const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000
 
-                                // If bright vinyl, use dark border. If dark vinyl, use light border.
                                 if (brightness > 155) {
                                     borderColor = "rgba(0, 0, 0, 0.3)"
                                 } else {
-                                    borderColor = "rgba(255, 255, 255, 0.4)" // Stronger white border
+                                    borderColor = "rgba(255, 255, 255, 0.4)"
                                 }
                             }
 
@@ -680,7 +638,6 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                                     >
                                         {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                                     </button>
-
                                 </>
                             ) : (
                                 <div className="flex items-center gap-2 text-white/50 bg-white/10 px-3 py-1.5 rounded-full">
@@ -736,67 +693,63 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             </div>
 
             {/* Comments Modal */}
-            {
-                showComments && (
+            {showComments && (
+                <div
+                    className={`fixed inset-0 z-[9999] flex items-end justify-center bg-black/60 ${commentsFullscreen ? 'pb-0' : 'pb-4'}`}
+                    style={{
+                        animation: 'fadeIn 0.2s ease-out',
+                    }}
+                    onClick={closeComments}
+                >
                     <div
-                        className={`fixed inset-0 z-[9999] flex items-end justify-center bg-black/60 ${commentsFullscreen ? 'pb-0' : 'pb-4'}`}
-                        style={{
-                            animation: 'fadeIn 0.2s ease-out',
-                            // Removed manual height to rely on CSS fixed positioning
-                        }}
-                        onClick={closeComments}
+                        className={`bg-neutral-900 w-full max-w-lg flex flex-col transition-all duration-300 ${commentsFullscreen
+                            ? 'h-full mt-0 rounded-none mx-0 pb-0'
+                            : 'h-[65%] rounded-3xl'
+                            }`}
+                        style={{ animation: 'slideUp 0.3s ease-out' }}
+                        onClick={e => e.stopPropagation()}
                     >
+                        {/* Drag handle */}
                         <div
-                            className={`bg-neutral-900 w-full max-w-lg flex flex-col transition-all duration-300 ${commentsFullscreen
-                                ? 'h-full mt-0 rounded-none mx-0 pb-0' // Full height when fullscreen
-                                : 'h-[65%] rounded-3xl'
-                                }`}
-                            style={{ animation: 'slideUp 0.3s ease-out' }}
-                            onClick={e => e.stopPropagation()}
+                            className="flex flex-col items-center pt-3 pb-1 cursor-pointer touch-none"
+                            onTouchStart={handleCommentsDragStart}
+                            onTouchEnd={handleCommentsDragEnd}
+                            onClick={toggleCommentsFullscreen}
                         >
-                            {/* Drag handle - click or drag to toggle fullscreen */}
-                            <div
-                                className="flex flex-col items-center pt-3 pb-1 cursor-pointer touch-none"
-                                onTouchStart={handleCommentsDragStart}
-                                onTouchEnd={handleCommentsDragEnd}
-                                onClick={toggleCommentsFullscreen}
-                            >
-                                <div className="w-12 h-1.5 bg-white/40 rounded-full hover:bg-white/60 transition-colors" />
-                                <p className="text-white/30 text-xs mt-2 md:hidden">Glissez pour agrandir</p>
-                            </div>
-                            <div className="flex items-center justify-between px-4 pb-3 border-b border-neutral-800">
-                                <h3 className="font-bold text-white">Commentaires</h3>
-                                <div className="flex items-center gap-3">
-                                    {/* Fullscreen toggle button (visible on desktop) */}
-                                    <button
-                                        onClick={toggleCommentsFullscreen}
-                                        className="hidden md:block text-white/60 hover:text-white text-sm"
-                                    >
-                                        {commentsFullscreen ? '↓ Réduire' : '↑ Agrandir'}
-                                    </button>
-                                    <button onClick={closeComments} className="text-white/60 hover:text-white text-lg">
-                                        ✕
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="flex-1 px-3 min-h-0 flex flex-col">
-                                <CommentsSection
-                                    vinylId={currentItem.id}
-                                    currentUserId={currentUserId}
-                                    vinylOwnerId={currentItem.user_id}
-                                    onCommentAdded={() => setCommentCounts(prev => ({ ...prev, [currentItem.id]: (prev[currentItem.id] || 0) + 1 }))}
-                                    variant="modal"
-                                    onInputFocus={() => {
-                                        if (!commentsFullscreen) {
-                                            toggleCommentsFullscreen()
-                                        }
-                                    }}
-                                />
+                            <div className="w-12 h-1.5 bg-white/40 rounded-full hover:bg-white/60 transition-colors" />
+                            <p className="text-white/30 text-xs mt-2 md:hidden">Glissez pour agrandir</p>
+                        </div>
+                        <div className="flex items-center justify-between px-4 pb-3 border-b border-neutral-800">
+                            <h3 className="font-bold text-white">Commentaires</h3>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={toggleCommentsFullscreen}
+                                    className="hidden md:block text-white/60 hover:text-white text-sm"
+                                >
+                                    {commentsFullscreen ? '↓ Réduire' : '↑ Agrandir'}
+                                </button>
+                                <button onClick={closeComments} className="text-white/60 hover:text-white text-lg">
+                                    ✕
+                                </button>
                             </div>
                         </div>
+                        <div className="flex-1 px-3 min-h-0 flex flex-col">
+                            <CommentsSection
+                                vinylId={currentItem.id}
+                                currentUserId={currentUserId}
+                                vinylOwnerId={currentItem.user_id}
+                                onCommentAdded={() => setCommentCounts(prev => ({ ...prev, [currentItem.id]: (prev[currentItem.id] || 0) + 1 }))}
+                                variant="modal"
+                                onInputFocus={() => {
+                                    if (!commentsFullscreen) {
+                                        toggleCommentsFullscreen()
+                                    }
+                                }}
+                            />
+                        </div>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+        </div>
     )
 }
