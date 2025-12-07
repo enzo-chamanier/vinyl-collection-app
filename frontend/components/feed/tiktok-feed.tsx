@@ -60,6 +60,14 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     const lastTapTime = useRef(0)
     const commentsDragStartY = useRef(0)
 
+    const [debugLog, setDebugLog] = useState<string[]>([])
+
+    const addDebugLog = (msg: string) => {
+        setDebugLog(prev => [msg, ...prev].slice(0, 5))
+    }
+
+
+
     // Cleanup navbar visibility on unmount
     useEffect(() => {
         return () => {
@@ -112,6 +120,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             if (data.data && data.data.length > 0) {
                 const track = data.data[0] as DeezerTrack
                 if (track.preview) {
+                    console.log("Fetched audio preview:", track.preview)
                     setAudioUrl(track.preview)
                     return
                 }
@@ -150,19 +159,34 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     // Unlock audio on first user interaction
     const unlockAudio = useCallback(() => {
         if (!audioUnlocked && audioRef.current && !audioLoading) {
-            setAudioUnlocked(true)
             if (audioUrl) {
+                addDebugLog(`Unlock: ${audioUrl.substring(0, 20)}...`)
                 // Set src and play immediately within the user interaction event
                 audioRef.current.src = audioUrl
                 audioRef.current.load() // Required for iOS sometimes
                 const playPromise = audioRef.current.play()
 
                 if (playPromise !== undefined) {
-                    playPromise.catch((e) => {
-                        console.error("Unlock play failed:", e)
-                    })
+                    playPromise
+                        .then(() => {
+                            addDebugLog("Play success")
+                            console.log("Audio unlock successful")
+                            setIsPlaying(true)
+                            setAudioUnlocked(true)
+                        })
+                        .catch((e) => {
+                            addDebugLog(`Play error: ${e.message}`)
+                            console.error("Unlock play failed:", e)
+                            setAudioUnlocked(true)
+                        })
+                } else {
+                    addDebugLog("No promise")
+                    setIsPlaying(true)
+                    setAudioUnlocked(true)
                 }
-                setIsPlaying(true)
+            } else {
+                addDebugLog("No audio URL")
+                setAudioUnlocked(true)
             }
         }
     }, [audioUnlocked, audioUrl, audioLoading])
@@ -404,6 +428,12 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
         >
+            <div className="absolute top-20 left-4 z-50 bg-black/50 text-white text-xs p-2 pointer-events-none">
+                <p>Debug Info:</p>
+                {debugLog.map((log, i) => (
+                    <p key={i}>{log}</p>
+                ))}
+            </div>
             <audio ref={audioRef} loop playsInline preload="auto" />
 
             {/* Audio unlock overlay */}

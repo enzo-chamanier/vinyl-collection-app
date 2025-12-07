@@ -25,7 +25,7 @@ const PORT = process.env.PORT || 5000;
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: "*", // Allow all origins for development
     credentials: true,
   },
 });
@@ -35,7 +35,7 @@ console.log("Socket.io initialized with origin:", process.env.FRONTEND_URL || "h
 // Middleware
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: true, // Allow all origins for development
     credentials: true,
   })
 );
