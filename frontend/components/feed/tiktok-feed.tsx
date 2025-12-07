@@ -38,6 +38,8 @@ interface DeezerTrack {
     artist: { name: string }
 }
 
+const SILENT_AUDIO_URL = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQQAAAAAAA=="
+
 export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
     const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined)
@@ -173,15 +175,15 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
 
         // If we have pending audio to fetch, do it now
         if (pendingAudioFetch) {
-            addDebugLog("Unlocking and fetching pending audio")
+            addDebugLog("Unlocking with silent audio")
+            // Play silent audio immediately to unlock context synchronously
+            audioRef.current.src = SILENT_AUDIO_URL
+
             // We need to set unlocked to true FIRST so fetchAudioPreview proceeds
             setAudioUnlocked(true)
-            // We can't call fetchAudioPreview directly here because it depends on audioUnlocked state
-            // which won't be updated yet in this closure. 
-            // Instead, we'll rely on a useEffect to trigger the fetch when audioUnlocked becomes true
         }
 
-        // Just play an empty promise to unlock the audio context
+        // Play to unlock the audio context
         const playPromise = audioRef.current.play()
 
         if (playPromise !== undefined) {
@@ -192,7 +194,10 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                     setAudioUnlocked(true)
                 })
                 .catch((e) => {
-                    addDebugLog(`Unlock error: ${e.message}`)
+                    // Ignore AbortError which happens when we switch source quickly
+                    if (e.name !== 'AbortError') {
+                        addDebugLog(`Unlock error: ${e.message}`)
+                    }
                     // Mark as unlocked and playing so we can retry
                     setAudioUnlocked(true)
                     setIsPlaying(true)
