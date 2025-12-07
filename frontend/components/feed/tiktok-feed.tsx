@@ -154,7 +154,14 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             if (audioUrl) {
                 // Set src and play immediately within the user interaction event
                 audioRef.current.src = audioUrl
-                audioRef.current.play().catch((e) => console.error("Unlock play failed:", e))
+                audioRef.current.load() // Required for iOS sometimes
+                const playPromise = audioRef.current.play()
+
+                if (playPromise !== undefined) {
+                    playPromise.catch((e) => {
+                        console.error("Unlock play failed:", e)
+                    })
+                }
                 setIsPlaying(true)
             }
         }
@@ -168,6 +175,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             if (!audioRef.current.src.endsWith(audioUrl)) {
                 setIsPlaying(true)
                 audioRef.current.src = audioUrl
+                audioRef.current.load() // Ensure we load the new source
                 audioRef.current.play().catch(() => { })
             }
         }
@@ -396,7 +404,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
         >
-            <audio ref={audioRef} loop />
+            <audio ref={audioRef} loop playsInline preload="auto" />
 
             {/* Audio unlock overlay */}
             {!audioUnlocked && (
