@@ -163,7 +163,8 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                 addDebugLog(`Unlock: ${audioUrl.substring(0, 20)}...`)
                 // Set src and play immediately within the user interaction event
                 audioRef.current.src = audioUrl
-                audioRef.current.load() // Required for iOS sometimes
+                // audioRef.current.load() // REMOVED: Can cause issues on modern iOS if called right after src
+
                 const playPromise = audioRef.current.play()
 
                 if (playPromise !== undefined) {
@@ -177,6 +178,8 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                         .catch((e) => {
                             addDebugLog(`Play error: ${e.message}`)
                             console.error("Unlock play failed:", e)
+                            // If it fails, we might need to reset the source or try again
+                            // But for now, let's keep the state unlocked so they can try clicking the vinyl
                             setAudioUnlocked(true)
                         })
                 } else {
@@ -434,16 +437,19 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                     <p key={i}>{log}</p>
                 ))}
             </div>
-            <audio ref={audioRef} loop playsInline preload="auto" />
+            <audio ref={audioRef} loop playsInline preload="auto" crossOrigin="anonymous" />
 
             {/* Audio unlock overlay */}
             {!audioUnlocked && (
                 <div
                     className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer"
-                    onClick={() => {
-                        if (!audioLoading) {
-                            unlockAudio()
-                        }
+                    onClick={(e) => {
+                        e.preventDefault()
+                        if (!audioLoading) unlockAudio()
+                    }}
+                    onTouchEnd={(e) => {
+                        e.preventDefault()
+                        if (!audioLoading) unlockAudio()
                     }}
                 >
                     <div className="text-center animate-pulse">

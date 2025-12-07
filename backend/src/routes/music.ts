@@ -12,6 +12,7 @@ router.get("/search", async (req: Request, res: Response) => {
         }
 
         const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=1`);
+        console.log(`Deezer API status for "${q}":`, response.status);
 
         if (!response.ok) {
             return res.status(response.status).json({ error: "Deezer API error" });
