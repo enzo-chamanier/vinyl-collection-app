@@ -8,6 +8,7 @@ import { MobileNav } from "./mobile-nav"
 import { NotificationBell } from "@/components/notifications/notification-bell"
 import { PWAInstallGate } from "@/components/pwa/pwa-install-gate"
 import { useNetworkStatus } from "@/hooks/use-network-status"
+import { useBackendReady } from "@/components/backend-awakener"
 
 import { useEffect } from "react" // Added import
 
@@ -19,12 +20,14 @@ export function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter()
   const pathname = usePathname()
   const isOnline = useNetworkStatus()
+  const isReady = useBackendReady()
+  const canNavigate = isOnline && isReady
 
   useEffect(() => {
-    if (!isOnline && pathname !== "/dashboard") {
+    if (!canNavigate && pathname !== "/dashboard") {
       router.replace("/dashboard")
     }
-  }, [isOnline, pathname, router])
+  }, [canNavigate, pathname, router])
 
   const handleLogout = () => {
     localStorage.removeItem("token")
@@ -44,7 +47,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   ]
 
   // If redirecting, don't show content
-  if (!isOnline && pathname !== "/dashboard") {
+  if (!canNavigate && pathname !== "/dashboard") {
     return null
   }
 
@@ -76,8 +79,8 @@ export function AppLayout({ children }: AppLayoutProps) {
 
             {/* Desktop Menu */}
             <nav className="hidden md:flex items-center gap-6">
-              {isOnline && <NotificationBell />}
-              {isOnline && navItems.map((item) => (
+              {canNavigate && <NotificationBell />}
+              {canNavigate && navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -103,7 +106,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <img src="/logo.png" alt="Discory Logo" className="w-8 h-8 invert" />
             <span className="font-bold text-xl text-white">Discory</span>
           </div>
-          {isOnline && <NotificationBell />}
+          {canNavigate && <NotificationBell />}
         </div>
 
         {/* Main Content */}

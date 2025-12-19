@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { Disc, Home, ScanLine, Search, User, ArrowUp } from "lucide-react"
 import { api } from "@/lib/api"
 import { useNetworkStatus } from "@/hooks/use-network-status"
+import { useBackendReady } from "@/components/backend-awakener"
 
 export function MobileNav() {
     const pathname = usePathname()
@@ -62,6 +63,8 @@ export function MobileNav() {
     }
 
     const isOnline = useNetworkStatus()
+    const isReady = useBackendReady()
+    const canNavigate = isOnline && isReady
 
     const navItems = [
         { href: "/dashboard", label: "Collection", icon: Disc },
@@ -85,7 +88,7 @@ export function MobileNav() {
         )
     }
 
-    if (isHidden || !isOnline) return null
+    if (isHidden || !canNavigate) return null
 
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-neutral-950 border-t border-neutral-800 z-50 pb-6 animate-in fade-in slide-in-from-bottom-4">

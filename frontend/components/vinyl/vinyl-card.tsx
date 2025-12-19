@@ -8,6 +8,7 @@ import { VinylColorPicker, type VinylColorData, getVinylBackground } from "./vin
 import { AlertCircle, CheckCircle } from "lucide-react"
 import { CommentsSection } from "../feed/comments-section"
 import { useNetworkStatus } from "@/hooks/use-network-status"
+import { useBackendReady } from "@/components/backend-awakener"
 
 interface Vinyl {
   id: string
@@ -56,6 +57,11 @@ export function VinylCard({
   const [deleting, setDeleting] = useState(false)
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [showCommentsModal, setShowCommentsModal] = useState(false)
+
+  const isOnline = useNetworkStatus()
+  const isBackendReady = useBackendReady()
+  // Interaction is allowed only if online AND backend is ready
+  const canInteract = isOnline && isBackendReady
 
   useEffect(() => {
     if (showCommentsModal) {
@@ -124,14 +130,12 @@ export function VinylCard({
   const discCount = vinyl.disc_count || 1
   const displayColors = Array.isArray(colorData) ? colorData : (colorData ? [colorData] : [])
 
-  const isOnline = useNetworkStatus()
-
   return (
     <>
       <div
         className="group relative"
         onClick={() => {
-          if (!isOnline) return // No interactions offline
+          if (!canInteract) return // No interactions offline or starting
           if (selectable) return
           if (linkToDetail) {
             router.push(`/vinyl?id=${vinyl.id}`)
@@ -140,7 +144,7 @@ export function VinylCard({
           }
         }}
       >
-        <div className={`relative aspect-square bg-card rounded-lg overflow-hidden ${isOnline ? "cursor-pointer" : ""}`}>
+        <div className={`relative aspect-square bg-card rounded-lg overflow-hidden ${canInteract ? "cursor-pointer" : ""}`}>
           {selectable && (
             <div
               className={`absolute inset-0 z-30 flex items-center justify-center transition-colors ${selected ? "bg-primary/70" : "bg-black/10 hover:bg-black/70"}`}
@@ -161,7 +165,7 @@ export function VinylCard({
           {!selectable && (
             <div
               onClick={(e) => {
-                if (!isOnline || readOnly) return
+                if (!canInteract || readOnly) return
                 e.stopPropagation()
                 // If clicking the color icon specifically, open color picker
                 // Otherwise the parent click handler will open comments
@@ -170,13 +174,13 @@ export function VinylCard({
             >
               <button
                 onClick={(e) => {
-                  if (!isOnline || readOnly) return
+                  if (!canInteract || readOnly) return
                   e.stopPropagation()
                   setShowColorPicker(true)
                 }}
-                disabled={!isOnline}
-                className={`flex -space-x-2 transition-transform ${readOnly || !isOnline ? '' : 'hover:scale-110 cursor-pointer'}`}
-                title={!isOnline ? "Non modifiable hors ligne" : (readOnly ? "Voir les couleurs" : (isMissingColor ? "Définir les couleurs" : "Modifier les couleurs"))}
+                disabled={!canInteract}
+                className={`flex -space-x-2 transition-transform ${readOnly || !canInteract ? '' : 'hover:scale-110 cursor-pointer'}`}
+                title={!canInteract ? "Non modifiable hors ligne" : (readOnly ? "Voir les couleurs" : (isMissingColor ? "Définir les couleurs" : "Modifier les couleurs"))}
               >
                 {isMissingColor ? (
                   <div className="w-8 h-8 rounded-full bg-red-500 border-2 border-white/20 shadow-lg flex items-center justify-center">
@@ -213,7 +217,7 @@ export function VinylCard({
               src={vinyl.cover_image || "/placeholder.svg"}
               alt={vinyl.title}
               fill
-              className={`object-cover ${isOnline ? "group-hover:scale-105" : ""} transition`}
+              className={`object-cover ${canInteract ? "group-hover:scale-105" : ""} transition`}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary to-secondary">
@@ -261,7 +265,7 @@ export function VinylCard({
           )}
         </div>
 
-        {showDelete && isOnline && (
+        {showDelete && canInteract && (
           <div className="absolute inset-0 bg-black/80 rounded-lg flex items-center justify-center gap-2 p-2 z-10">
             <button
               onClick={handleDelete}
@@ -282,7 +286,7 @@ export function VinylCard({
           </div>
         )}
 
-        {!showDelete && !selectable && !readOnly && isOnline && (
+        {!showDelete && !selectable && !readOnly && canInteract && (
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -300,39 +304,43 @@ export function VinylCard({
         )}
       </div>
 
-      {showColorPicker && (
-        <VinylColorPicker
-          initialColor={colorData || vinyl.vinyl_color}
-          discCount={discCount}
-          initialGiftedBy={vinyl.gifted_by_user_id}
-          initialSharedWith={vinyl.shared_with_user_id}
-          initialFormat={vinyl.format}
-          onSave={handleColorSave}
-          onClose={() => setShowColorPicker(false)}
-        />
-      )}
+      {
+        showColorPicker && (
+          <VinylColorPicker
+            initialColor={colorData || vinyl.vinyl_color}
+            discCount={discCount}
+            initialGiftedBy={vinyl.gifted_by_user_id}
+            initialSharedWith={vinyl.shared_with_user_id}
+            initialFormat={vinyl.format}
+            onSave={handleColorSave}
+            onClose={() => setShowColorPicker(false)}
+          />
+        )
+      }
 
-      {showCommentsModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm md:p-4" onClick={() => setShowCommentsModal(false)}>
-          <div className="bg-background w-full h-full md:w-full md:max-w-lg md:h-auto md:max-h-[80vh] md:rounded-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-4 pt-8 border-b border-border flex justify-between items-center">
-              <h3 className="font-bold text-foreground">Commentaires</h3>
-              <button onClick={() => setShowCommentsModal(false)} className="text-muted-foreground hover:text-foreground">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden flex flex-col bg-background p-4 pb-12">
-              <CommentsSection
-                vinylId={vinyl.id}
-                currentUserId={currentUserId}
-                vinylOwnerId={vinyl.user_id}
-                onCommentAdded={() => { }}
-                variant="modal"
-              />
+      {
+        showCommentsModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm md:p-4" onClick={() => setShowCommentsModal(false)}>
+            <div className="bg-background w-full h-full md:w-full md:max-w-lg md:h-auto md:max-h-[80vh] md:rounded-xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="p-4 pt-8 border-b border-border flex justify-between items-center">
+                <h3 className="font-bold text-foreground">Commentaires</h3>
+                <button onClick={() => setShowCommentsModal(false)} className="text-muted-foreground hover:text-foreground">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden flex flex-col bg-background p-4 pb-12">
+                <CommentsSection
+                  vinylId={vinyl.id}
+                  currentUserId={currentUserId}
+                  vinylOwnerId={vinyl.user_id}
+                  onCommentAdded={() => { }}
+                  variant="modal"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
     </>
   )
 }

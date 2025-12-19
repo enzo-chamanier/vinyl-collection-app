@@ -1,9 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, createContext, useContext } from "react"
 import { api } from "@/lib/api"
 import { TopLoader } from "@/components/ui/top-loader"
 import { useNetworkStatus } from "@/hooks/use-network-status"
+
+const StartupContext = createContext<boolean>(false)
+
+export const useBackendReady = () => useContext(StartupContext)
 
 export function BackendAwakener({ children }: { children: React.ReactNode }) {
     const [isAwake, setIsAwake] = useState(false)
@@ -38,9 +42,9 @@ export function BackendAwakener({ children }: { children: React.ReactNode }) {
     // Always render children so the app can load cached data immediately.
     // The TopLoader will comfortably sit on top if we are waiting for the backend.
     return (
-        <>
+        <StartupContext.Provider value={isAwake}>
             <TopLoader visible={!isAwake} message="Démarrage de Discory..." />
             {children}
-        </>
+        </StartupContext.Provider>
     )
 }
