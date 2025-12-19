@@ -35,10 +35,8 @@ export function BackendAwakener({ children }: { children: React.ReactNode }) {
         }
     }, [isAwake, isOnline])
 
-    // Show top loader if not awake yet
-    // Note: If offline, this might keep spinning. That's okay for now or we could check navigator.onLine
-    // But user wants "Chargement de l'application" visual.
-
+    // Always render children so the app can load cached data immediately.
+    // The TopLoader will comfortably sit on top if we are waiting for the backend.
     return (
         <>
             <TopLoader visible={!isAwake} message="Démarrage de Discory..." />

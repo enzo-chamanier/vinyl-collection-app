@@ -1,23 +1,8 @@
-import withPWAInit from "@ducanh2912/next-pwa";
-
-const withPWA = withPWAInit({
-  dest: "public",
-  register: true,
-  skipWaiting: false,
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: true,
-  disable: false,
-  workboxOptions: {
-    disableDevLogs: true,
-    importScripts: ["/custom-sw.js"],
-  },
-});
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
-  output: 'export', // <-- ajouté pour export statique
+  output: 'standalone', // Force standalone to ensure SW generation
+
   experimental: {
     optimizePackageImports: ['@radix-ui/react-icons'],
   },
@@ -50,4 +35,5 @@ const nextConfig = {
   ],
 }
 
-export default withPWA(nextConfig);
+console.log("NEXT CONFIG LOADED. OUTPUT:", nextConfig.output);
+export default nextConfig;

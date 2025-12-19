@@ -4,6 +4,7 @@ import { Geist } from "next/font/google"
 import { PWAReloadPrompt } from "@/components/pwa/pwa-reload-prompt"
 import { ThemeProvider } from "@/components/theme-provider"
 import { BackendAwakener } from "@/components/backend-awakener"
+import { ServiceWorkerRegister } from "@/components/service-worker-register"
 
 import "./globals.css"
 
@@ -53,6 +54,7 @@ export default function RootLayout({
           </BackendAwakener>
         </ThemeProvider>
         <PWAReloadPrompt />
+        <ServiceWorkerRegister />
       </body>
     </html>
   )

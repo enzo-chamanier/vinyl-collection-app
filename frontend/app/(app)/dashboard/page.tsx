@@ -164,9 +164,9 @@ export default function DashboardPage() {
     }
   }, [router, refresh, fetchStats])
 
-  if (!authChecked || loading) {
-    return <FullScreenLoader message="Chargement de votre collection..." />
-  }
+  // if (!authChecked || loading) {
+  //   return <FullScreenLoader message="Chargement de votre collection..." />
+  // }
 
   return (
     <AppLayout>
