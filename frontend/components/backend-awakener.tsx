@@ -2,32 +2,47 @@
 
 import { useState, useEffect } from "react"
 import { api } from "@/lib/api"
-import { FullScreenLoader } from "@/components/ui/full-screen-loader"
+import { TopLoader } from "@/components/ui/top-loader"
+import { useNetworkStatus } from "@/hooks/use-network-status"
 
 export function BackendAwakener({ children }: { children: React.ReactNode }) {
     const [isAwake, setIsAwake] = useState(false)
 
+
+    const isOnline = useNetworkStatus()
+
     useEffect(() => {
         const checkBackend = async () => {
+            // If offline, we assume "awake" (local mode) immediately so we don't block
+            if (!isOnline) {
+                setIsAwake(true)
+                return
+            }
+
             try {
-                // We use a simple fetch here to avoid the api wrapper's error handling 
-                // which might log errors or redirect on 401 (though health shouldn't be protected)
-                // But wait, api wrapper adds base URL. Let's use api.get but handle error gracefully.
-                // Actually, let's just use the api wrapper to be consistent with base URL config.
+                // Determine if we need to wake up (simple health check)
                 await api.get("/health")
                 setIsAwake(true)
             } catch (error) {
-                console.log("Backend sleeping, retrying...", error)
+                console.log("Backend sleeping (or network error), retrying...", error)
                 setTimeout(checkBackend, 2000)
             }
         }
 
-        checkBackend()
-    }, [])
+        // Only confirm awake if we haven't already
+        if (!isAwake) {
+            checkBackend()
+        }
+    }, [isAwake, isOnline])
 
-    if (!isAwake) {
-        return <FullScreenLoader message="Démarrage de Discory..." />
-    }
+    // Show top loader if not awake yet
+    // Note: If offline, this might keep spinning. That's okay for now or we could check navigator.onLine
+    // But user wants "Chargement de l'application" visual.
 
-    return <>{children}</>
+    return (
+        <>
+            <TopLoader visible={!isAwake} message="Démarrage de Discory..." />
+            {children}
+        </>
+    )
 }

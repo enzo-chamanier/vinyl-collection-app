@@ -24,6 +24,13 @@ async function request(endpoint: string, options: RequestOptions = {}): Promise<
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        window.location.href = "/login"
+      }
+    }
     const error = await response.json()
     throw new Error(error.error?.message || error.error || "Request failed")
   }

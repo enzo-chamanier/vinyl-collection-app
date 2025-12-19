@@ -8,6 +8,8 @@ import { CollectionStats } from "@/components/stats/collection-stats"
 import { api } from "@/lib/api"
 import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
+import { useNetworkStatus } from "@/hooks/use-network-status"
+import { TopLoader } from "@/components/ui/top-loader"
 
 
 interface CollectionStatsType {
@@ -27,17 +29,99 @@ interface Vinyl {
   vinyl_color?: string
   disc_count?: number
   format?: "vinyl" | "cd"
+  date_added?: string
 }
 
 export default function DashboardPage() {
   const router = useRouter()
   const [stats, setStats] = useState<CollectionStatsType | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const isOnline = useNetworkStatus()
+
+  // Background Sync Effect
+  useEffect(() => {
+    async function syncCollection() {
+      if (!isOnline) return
+      try {
+        setIsSyncing(true)
+        // Fetch all vinyls for offline cache (limit 1000 for MVP)
+        const result = await api.get("/vinyls/my-collection?limit=1000&offset=0")
+        if (result.data) {
+          const { saveVinyls } = await import("@/lib/db")
+          await saveVinyls(result.data)
+          console.log("Collection synced to offline storage")
+        }
+      } catch (err) {
+        console.error("Background sync failed", err)
+      } finally {
+        setIsSyncing(false)
+      }
+    }
+
+    // Sync on mount if online, or when coming back online
+    if (isOnline && authChecked) {
+      syncCollection()
+    }
+  }, [isOnline, authChecked])
 
   const fetchVinyls = useCallback(async (offset: number, limit: number) => {
-    const result = await api.get(`/vinyls/my-collection?limit=${limit}&offset=${offset}`)
-    return result
-  }, [])
+    // Helper for timeout
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Request timeout")), 3000)
+    )
+
+    // If offline (or we think we are), read from IndexedDB
+    if (!isOnline) {
+      const { getVinyls } = await import("@/lib/db")
+      const allVinyls = await getVinyls()
+
+      // Sort by date added desc to match backend
+      allVinyls.sort((a, b) => {
+        const dateA = new Date(a.date_added || 0).getTime()
+        const dateB = new Date(b.date_added || 0).getTime()
+        return dateB - dateA
+      })
+
+      // For now just return as is (offset/limit)
+      const sliced = allVinyls.slice(offset, offset + limit)
+      return {
+        data: sliced,
+        total: allVinyls.length,
+        hasMore: offset + limit < allVinyls.length
+      }
+    }
+
+    // Online: Use API with timeout
+    try {
+      // Race between API call and timeout
+      const result = await Promise.race([
+        api.get(`/vinyls/my-collection?limit=${limit}&offset=${offset}`),
+        timeoutPromise
+      ]) as any // Type assertion for the race result
+
+      return result
+    } catch (error) {
+      // Fallback to DB if API call fails but we thought we were online
+      console.warn("API failed or timed out, falling back to offline DB", error)
+      const { getVinyls } = await import("@/lib/db")
+      const allVinyls = await getVinyls()
+
+      // Sort by date added desc to match backend
+      allVinyls.sort((a, b) => {
+        const dateA = new Date(a.date_added || 0).getTime()
+        const dateB = new Date(b.date_added || 0).getTime()
+        return dateB - dateA
+      })
+
+      const sliced = allVinyls.slice(offset, offset + limit)
+      return {
+        data: sliced,
+        total: allVinyls.length,
+        hasMore: offset + limit < allVinyls.length
+      }
+    }
+  }, [isOnline])
 
   const {
     data: vinyls,
@@ -87,6 +171,7 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <div className="space-y-8">
+        <TopLoader visible={isSyncing} message="Mise à jour de la collection..." />
         {stats && <CollectionStats stats={stats} />}
         <VinylCollection
           vinyls={vinyls}

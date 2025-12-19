@@ -42,14 +42,14 @@ export function PWAReloadPrompt() {
                 <div className="flex-1">
                     <h3 className="font-semibold text-white text-sm">Mise à jour disponible</h3>
                     <p className="text-text-secondary text-xs mt-1">
-                        Une nouvelle version de l'application est disponible.
+                        L'application a été mise à jour, en appuyant sur ok, vous aurez accès à cette nouvelle version.
                     </p>
                 </div>
                 <button
                     onClick={reloadPage}
                     className="bg-primary hover:bg-primary/90 text-white text-xs font-semibold px-3 py-2 rounded transition whitespace-nowrap"
                 >
-                    Mettre à jour
+                    OK
                 </button>
             </div>
         </div>

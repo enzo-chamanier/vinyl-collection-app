@@ -4,7 +4,8 @@ import { VinylCard } from "./vinyl-card"
 import { useState, useMemo, useRef, useEffect } from "react"
 import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 import { api } from "@/lib/api"
-import { SlidersHorizontal } from "lucide-react"
+import { SlidersHorizontal, WifiOff } from "lucide-react"
+import { useNetworkStatus } from "@/hooks/use-network-status"
 
 interface Vinyl {
   id: string
@@ -48,6 +49,8 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
   const [currentUsername, setCurrentUsername] = useState<string | undefined>(undefined)
   const [showFilters, setShowFilters] = useState(false)
   const headerRef = useRef<HTMLDivElement>(null)
+
+  const isOnline = useNetworkStatus()
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "{}")
@@ -191,12 +194,19 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
           </button>
         </div>
 
+        {!isOnline && (
+          <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 px-4 py-3 rounded-lg flex items-center gap-2 text-sm">
+            <WifiOff className="w-4 h-4" />
+            <span>Mode hors ligne : Collection en lecture seule</span>
+          </div>
+        )}
+
         <div className={`${showFilters ? 'flex' : 'hidden'} md:flex flex-col sm:flex-row gap-4`}>
           {isSelectionMode ? (
             <>
               <button
                 onClick={handleBulkDelete}
-                disabled={selectedIds.size === 0 || deleting}
+                disabled={selectedIds.size === 0 || deleting || !isOnline}
                 className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deleting ? "Suppression..." : `Supprimer (${selectedIds.size})`}
@@ -215,7 +225,9 @@ export function VinylCollection({ vinyls, loading, onUpdate, title = "Votre coll
             <>
               <button
                 onClick={() => setIsSelectionMode(true)}
-                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 !text-neutral-600 dark:!text-neutral-400 px-4 py-2 rounded-lg text-sm font-medium hover:!text-black dark:hover:!text-white hover:border-primary transition"
+                disabled={!isOnline}
+                title={!isOnline ? "Indisponible hors ligne" : ""}
+                className="!bg-white dark:!bg-neutral-900 border border-neutral-200 dark:border-neutral-800 !text-neutral-600 dark:!text-neutral-400 px-4 py-2 rounded-lg text-sm font-medium hover:!text-black dark:hover:!text-white hover:border-primary transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Sélectionner
               </button>

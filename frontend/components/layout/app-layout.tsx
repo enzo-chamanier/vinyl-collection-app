@@ -7,6 +7,9 @@ import Link from "next/link"
 import { MobileNav } from "./mobile-nav"
 import { NotificationBell } from "@/components/notifications/notification-bell"
 import { PWAInstallGate } from "@/components/pwa/pwa-install-gate"
+import { useNetworkStatus } from "@/hooks/use-network-status"
+
+import { useEffect } from "react" // Added import
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -15,6 +18,13 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const isOnline = useNetworkStatus()
+
+  useEffect(() => {
+    if (!isOnline && pathname !== "/dashboard") {
+      router.replace("/dashboard")
+    }
+  }, [isOnline, pathname, router])
 
   const handleLogout = () => {
     localStorage.removeItem("token")
@@ -32,6 +42,11 @@ export function AppLayout({ children }: AppLayoutProps) {
     { href: "/friends", label: "Amis" },
     { href: "/profile", label: "Profil" },
   ]
+
+  // If redirecting, don't show content
+  if (!isOnline && pathname !== "/dashboard") {
+    return null
+  }
 
   return (
     <PWAInstallGate>
@@ -61,8 +76,8 @@ export function AppLayout({ children }: AppLayoutProps) {
 
             {/* Desktop Menu */}
             <nav className="hidden md:flex items-center gap-6">
-              <NotificationBell />
-              {navItems.map((item) => (
+              {isOnline && <NotificationBell />}
+              {isOnline && navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -88,7 +103,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <img src="/logo.png" alt="Discory Logo" className="w-8 h-8 invert" />
             <span className="font-bold text-xl text-white">Discory</span>
           </div>
-          <NotificationBell />
+          {isOnline && <NotificationBell />}
         </div>
 
         {/* Main Content */}

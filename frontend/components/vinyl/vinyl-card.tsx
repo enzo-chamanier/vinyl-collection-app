@@ -7,6 +7,7 @@ import { api } from "@/lib/api"
 import { VinylColorPicker, type VinylColorData, getVinylBackground } from "./vinyl-color-picker"
 import { AlertCircle, CheckCircle } from "lucide-react"
 import { CommentsSection } from "../feed/comments-section"
+import { useNetworkStatus } from "@/hooks/use-network-status"
 
 interface Vinyl {
   id: string
@@ -123,11 +124,14 @@ export function VinylCard({
   const discCount = vinyl.disc_count || 1
   const displayColors = Array.isArray(colorData) ? colorData : (colorData ? [colorData] : [])
 
+  const isOnline = useNetworkStatus()
+
   return (
     <>
       <div
         className="group relative"
         onClick={() => {
+          if (!isOnline) return // No interactions offline
           if (selectable) return
           if (linkToDetail) {
             router.push(`/vinyl?id=${vinyl.id}`)
@@ -136,7 +140,7 @@ export function VinylCard({
           }
         }}
       >
-        <div className="relative aspect-square bg-card rounded-lg overflow-hidden cursor-pointer">
+        <div className={`relative aspect-square bg-card rounded-lg overflow-hidden ${isOnline ? "cursor-pointer" : ""}`}>
           {selectable && (
             <div
               className={`absolute inset-0 z-30 flex items-center justify-center transition-colors ${selected ? "bg-primary/70" : "bg-black/10 hover:bg-black/70"}`}
@@ -157,7 +161,7 @@ export function VinylCard({
           {!selectable && (
             <div
               onClick={(e) => {
-                if (readOnly) return
+                if (!isOnline || readOnly) return
                 e.stopPropagation()
                 // If clicking the color icon specifically, open color picker
                 // Otherwise the parent click handler will open comments
@@ -166,12 +170,13 @@ export function VinylCard({
             >
               <button
                 onClick={(e) => {
-                  if (readOnly) return
+                  if (!isOnline || readOnly) return
                   e.stopPropagation()
                   setShowColorPicker(true)
                 }}
-                className={`flex -space-x-2 transition-transform ${readOnly ? '' : 'hover:scale-110 cursor-pointer'}`}
-                title={readOnly ? "Voir les couleurs" : (isMissingColor ? "Définir les couleurs" : "Modifier les couleurs")}
+                disabled={!isOnline}
+                className={`flex -space-x-2 transition-transform ${readOnly || !isOnline ? '' : 'hover:scale-110 cursor-pointer'}`}
+                title={!isOnline ? "Non modifiable hors ligne" : (readOnly ? "Voir les couleurs" : (isMissingColor ? "Définir les couleurs" : "Modifier les couleurs"))}
               >
                 {isMissingColor ? (
                   <div className="w-8 h-8 rounded-full bg-red-500 border-2 border-white/20 shadow-lg flex items-center justify-center">
@@ -208,7 +213,7 @@ export function VinylCard({
               src={vinyl.cover_image || "/placeholder.svg"}
               alt={vinyl.title}
               fill
-              className="object-cover group-hover:scale-105 transition"
+              className={`object-cover ${isOnline ? "group-hover:scale-105" : ""} transition`}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary to-secondary">
@@ -256,7 +261,7 @@ export function VinylCard({
           )}
         </div>
 
-        {showDelete && (
+        {showDelete && isOnline && (
           <div className="absolute inset-0 bg-black/80 rounded-lg flex items-center justify-center gap-2 p-2 z-10">
             <button
               onClick={handleDelete}
@@ -277,7 +282,7 @@ export function VinylCard({
           </div>
         )}
 
-        {!showDelete && !selectable && !readOnly && (
+        {!showDelete && !selectable && !readOnly && isOnline && (
           <button
             onClick={(e) => {
               e.stopPropagation()

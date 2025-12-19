@@ -1,8 +1,11 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Disc, Home, ScanLine, Search, User, ArrowUp } from "lucide-react"
 import { api } from "@/lib/api"
+import { useNetworkStatus } from "@/hooks/use-network-status"
 
 export function MobileNav() {
     const pathname = usePathname()
@@ -58,11 +61,13 @@ export function MobileNav() {
         window.scrollTo({ top: 0, behavior: "smooth" })
     }
 
+    const isOnline = useNetworkStatus()
+
     const navItems = [
         { href: "/dashboard", label: "Collection", icon: Disc },
         { href: "/feed", label: "Fil", icon: Home },
         { href: "/scan", label: "Scan", icon: ScanLine },
-        { href: "/friends", label: "Recherche", icon: Search }, // Changed from Amis to Recherche
+        { href: "/friends", label: "Recherche", icon: Search },
         { href: "/profile", label: "Profil", icon: User, isProfile: true },
     ]
 
@@ -80,7 +85,7 @@ export function MobileNav() {
         )
     }
 
-    if (isHidden) return null
+    if (isHidden || !isOnline) return null
 
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-neutral-950 border-t border-neutral-800 z-50 pb-6 animate-in fade-in slide-in-from-bottom-4">

@@ -53,19 +53,13 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     const [audioUnlocked, setAudioUnlocked] = useState(false)
     const [showHeartAnimation, setShowHeartAnimation] = useState(false)
     const [commentsFullscreen, setCommentsFullscreen] = useState(false)
-    const [pendingAudioFetch, setPendingAudioFetch] = useState<{ artist: string, title: string } | null>(null)
     const wasPlayingRef = useRef(false)
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const touchStartY = useRef(0)
     const lastTapTime = useRef(0)
     const commentsDragStartY = useRef(0)
-
-    const [debugLog, setDebugLog] = useState<string[]>([])
-
-    const addDebugLog = (msg: string) => {
-        setDebugLog(prev => [msg, ...prev].slice(0, 5))
-    }
+    const audioContextRef = useRef<AudioContext | null>(null)
 
     // Cleanup navbar visibility on unmount
     useEffect(() => {
@@ -73,6 +67,19 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             window.dispatchEvent(new CustomEvent('toggle-navbar', { detail: { hidden: false } }))
         }
     }, [])
+
+    // Resume audio when app comes back to foreground (iOS PWA fix)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && audioUnlocked && audioUrl && audioRef.current) {
+                audioRef.current.play().catch(() => { })
+                setIsPlaying(true)
+            }
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }, [audioUnlocked, audioUrl])
 
     // Initialize states from items
     useEffect(() => {
@@ -103,15 +110,8 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
     }, [])
 
     // Fetch audio preview from Deezer via backend proxy
+    // This runs immediately when a slide is shown to pre-load the URL
     const fetchAudioPreview = useCallback(async (artist: string, title: string) => {
-        // If audio is not unlocked yet, defer the fetch
-        if (!audioUnlocked) {
-            console.log("Audio locked, deferring fetch for:", title)
-            setPendingAudioFetch({ artist, title })
-            setAudioUrl(null)
-            return
-        }
-
         setAudioLoading(true)
         setAudioUrl(null)
 
@@ -125,7 +125,6 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             if (data.data && data.data.length > 0) {
                 const track = data.data[0] as DeezerTrack
                 if (track.preview) {
-                    console.log("Fetched audio preview:", track.preview)
                     const proxyUrl = `${API_URL}/music/proxy?url=${encodeURIComponent(track.preview)}`
                     setAudioUrl(proxyUrl)
                     return
@@ -136,7 +135,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         } finally {
             setAudioLoading(false)
         }
-    }, [audioUnlocked])
+    }, [])
 
     // Load audio when slide changes
     useEffect(() => {
@@ -158,55 +157,91 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
         }
     }, [isPlaying, isMuted, audioUrl])
 
-    // Unlock audio on first user interaction
+    // 🔥 iOS WebKit Audio Unlock with Active Document Refresh Hack
     const unlockAudio = useCallback(() => {
-        if (!audioRef.current) return
+        if (audioUnlocked) return
 
-        // ALWAYS interact with the audio element to bless it on iOS
-        audioRef.current.load()
 
-        if (pendingAudioFetch) {
-            addDebugLog("Unlocking and fetching pending audio")
-            setAudioUnlocked(true)
-            setIsPlaying(true)
-        } else if (audioUrl) {
-            audioRef.current.play()
-                .then(() => {
-                    addDebugLog("Unlock success")
-                    setIsPlaying(true)
-                    setAudioUnlocked(true)
-                })
-                .catch((e) => {
-                    addDebugLog(`Unlock error: ${e.message}`)
-                    setAudioUnlocked(true)
-                    setIsPlaying(true)
-                })
+        // Step 1: Create AudioContext if not exists
+        if (!audioContextRef.current) {
+            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+        }
+
+        // Step 2: Resume AudioContext (required for iOS)
+        audioContextRef.current.resume().catch(() => { })
+
+        // Step 3: 🧨 WebKit Active Document Refresh Hack
+        // Creates an invisible iframe to trick iOS into thinking the document was reactivated
+        const iframe = document.createElement("iframe")
+        iframe.style.display = "none"
+        iframe.setAttribute("src", "about:blank")
+        document.body.appendChild(iframe)
+
+        // Remove iframe after short delay
+        setTimeout(() => {
+            if (iframe.parentNode) {
+                document.body.removeChild(iframe)
+            }
+        }, 50)
+
+        // Step 4: Now play audio - iOS should allow it
+        if (audioRef.current) {
+            // ALWAYS use silent MP3 for unlock to avoid AbortError
+            const silentMp3 = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwmHAAAAAAD/+9DEAAAIAAaX9AAAIAAAP8AAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UMQbg8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"
+
+            const audio = audioRef.current
+
+            // Set src to silent MP3 first
+            audio.src = silentMp3
+
+            // Wait for audio to be ready before playing
+            const playWhenReady = () => {
+                audio.play()
+                    .then(() => {
+                        setAudioUnlocked(true)
+                        setIsPlaying(true)
+                    })
+                    .catch(() => {
+                        setAudioUnlocked(true)
+                    })
+            }
+
+            // Listen for canplaythrough OR just try after load
+            audio.addEventListener('canplaythrough', playWhenReady, { once: true })
+            audio.load()
+
+            // Fallback: try playing after 100ms if event didn't fire
+            setTimeout(() => {
+                if (!audioUnlocked) {
+                    playWhenReady()
+                }
+            }, 100)
         } else {
             setAudioUnlocked(true)
-            setIsPlaying(true)
         }
-    }, [pendingAudioFetch, audioUrl])
+    }, [audioUnlocked, audioUrl])
 
-    // Trigger pending fetch when unlocked
+    // Start playing when we have URL and audio is unlocked
+    const previousUrlRef = useRef<string | null>(null)
     useEffect(() => {
-        if (audioUnlocked && pendingAudioFetch) {
-            console.log("Audio unlocked, triggering pending fetch")
-            fetchAudioPreview(pendingAudioFetch.artist, pendingAudioFetch.title)
-            setPendingAudioFetch(null)
-        }
-    }, [audioUnlocked, pendingAudioFetch, fetchAudioPreview])
-
-    // Update audio source when URL changes
-    useEffect(() => {
-        if (audioRef.current && audioUrl && audioUnlocked) {
-            if (audioRef.current.src !== audioUrl) {
+        if (audioUnlocked && audioUrl && audioRef.current) {
+            // Play if URL changed
+            if (previousUrlRef.current !== audioUrl) {
+                previousUrlRef.current = audioUrl
                 audioRef.current.src = audioUrl
                 audioRef.current.load()
-                audioRef.current.play().catch(() => { })
-                setIsPlaying(true)
+                audioRef.current.play()
+                    .then(() => {
+                        setIsPlaying(true)
+                    })
+                    .catch((_e) => {
+                    })
             }
         }
-    }, [audioUrl, audioUnlocked])
+    }, [audioUnlocked, audioUrl])
+
+
+
 
     const goToSlide = useCallback((index: number, direction: 'up' | 'down' = 'up') => {
         if (index >= 0 && index < items.length) {
@@ -419,12 +454,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
         >
-            <div className="absolute top-20 left-4 z-50 bg-black/50 text-white text-xs p-2 pointer-events-none">
-                <p>Debug Info:</p>
-                {debugLog.map((log, i) => (
-                    <p key={i}>{log}</p>
-                ))}
-            </div>
+
             <audio ref={audioRef} loop playsInline preload="auto" crossOrigin="anonymous" />
 
             {/* Audio unlock overlay */}
@@ -442,7 +472,7 @@ export function TikTokFeed({ items, onLoadMore, hasMore = true }: TikTokFeedProp
                 >
                     <div className="flex flex-col items-center gap-4 animate-pulse">
                         <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30">
-                            {audioUrl || pendingAudioFetch ? (
+                            {audioUrl || audioLoading ? (
                                 <Volume2 size={40} className="text-white" />
                             ) : (
                                 <Play size={40} className="text-white" />
